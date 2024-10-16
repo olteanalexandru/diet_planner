@@ -1,0 +1,41 @@
+{
+  "name": "react-challenge",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@auth0/auth0-react": "^2.2.4",
+    "@auth0/nextjs-auth0": "^3.5.0",
+    "@preact/signals-react": "^2.2.0",
+    "@prisma/client": "^5.21.0",
+    "ai-digest": "^1.0.7",
+    "axios": "^1.7.7",
+    "bootstrap": "^5.3.3",
+    "lucide-react": "^0.447.0",
+    "next": "14.2.14",
+    "openai": "^4.67.0",
+    "pg": "^8.13.0",
+    "react": "^18",
+    "react-beautiful-dnd": "^13.1.1",
+    "react-content-loader": "^7.0.2",
+    "react-dom": "^18",
+    "stripe": "^17.2.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-beautiful-dnd": "^13.1.8",
+    "@types/react-dom": "^18",
+    "@types/uuid": "^10.0.0",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.14",
+    "prisma": "^5.21.0",
+    "typescript": "^5"
+  }
+}
