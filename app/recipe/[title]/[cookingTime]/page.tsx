@@ -7,6 +7,8 @@ import { useLocalStorage } from '../../../hooks/useLocalStorage';
 import { FavouriteRecipeComponent } from '../../../Components/Favorites';
 import { RecipeSkeleton } from './RecipeSkeleton';
 import { FollowButton } from '../../../Components/FollowButton';
+import { useFavorites } from '../../../context/FavoritesContext';
+import { Heart } from 'react-feather';
 
 
 interface Comment {
@@ -31,6 +33,25 @@ export default function RecipeDetails() {
     'favorites',
     []
   ) as [Recipe[], React.Dispatch<React.SetStateAction<Recipe[]>>];
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites();
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+
+  const handleToggleFavorite = async () => {
+    if (!recipe) return;
+    setIsTogglingFavorite(true);
+    try {
+      if (isFavorite(recipe)) {
+        await removeFavorite(recipe);
+      } else {
+        await addFavorite(recipe);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setIsTogglingFavorite(false);
+    }
+  };
+
   useEffect(() => {
     if (title && cookingTime) {
       const decodedTitle = decodeURIComponent(title);
@@ -147,15 +168,25 @@ if (loading) return <RecipeSkeleton />;
   if (!recipe) return <div className="container mt-5">Recipe not found</div>;
   return (
     <div className="container mt-5">
-      <div className="row">
-        <div className="col-md-6">
-          <img src={recipe.imageUrlLarge} alt="Recipe" className="img-fluid mb-4" style={{ width: '20rem', height: 'auto' }} />
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h1 className="mb-0">{recipe.title}</h1>
-            <FavouriteRecipeComponent recipe={recipe} favorites={favorites} setFavorites={setFavorites} />
-          </div>
-          <p className="text-muted">{recipe.cookingTime} mins</p>
+    <div className="row">
+      <div className="col-md-6">
+        <img src={recipe.imageUrlLarge} alt="Recipe" className="img-fluid mb-4" style={{ width: '20rem', height: 'auto' }} />
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h1 className="mb-0">{recipe.title}</h1>
+          <button
+            className="btn btn-link"
+            onClick={handleToggleFavorite}
+            disabled={isTogglingFavorite}
+          >
+            {isTogglingFavorite ? (
+              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            ) : (
+              <Heart size={24} color="#65558F" fill={isFavorite(recipe) ? '#65558F' : 'none'} />
+            )}
+          </button>
         </div>
+        <p className="text-muted">{recipe.cookingTime} mins</p>
+      </div>
         <div className="col-md-6">
         
           <h2 className="mt-4">Ingredients:</h2>

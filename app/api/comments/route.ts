@@ -26,29 +26,36 @@ export async function GET(req: NextRequest) {
   }
 }
 
-
 export async function POST(req: NextRequest) {
-    const session = await getSession();
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-  
-    try {
-      const { recipeId, content } = await req.json();
-  
-      const comment = await prisma.comment.create({
-        data: {
-          content,
-          recipeId,
-          userId: session.user.sub, // Use the Auth0 user ID
-        },
-        include: { user: { select: { id: true, name: true } } },
-      });
-  
-      return NextResponse.json({ comment });
-    } catch (error) {
-      console.error('Error creating comment:', error);
-      return NextResponse.json({ error: 'Error creating comment' }, { status: 500 });
-    }
+  const session = await getSession();
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  
+
+  try {
+    const { recipeId, content } = await req.json();
+
+    const comment = await prisma.comment.create({
+      data: {
+        content,
+        recipe: { connect: { id: recipeId } },
+        user: { connect: { id: session.user.sub } },
+      },
+      include: { user: { select: { id: true, name: true } } },
+    });
+
+    // Create an activity for the new comment
+    await prisma.activity.create({
+      data: {
+        action: 'commented',
+        user: { connect: { id: session.user.sub } },
+        recipe: { connect: { id: recipeId } },
+      },
+    });
+
+    return NextResponse.json({ comment });
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    return NextResponse.json({ error: 'Error creating comment' }, { status: 500 });
+  }
+}

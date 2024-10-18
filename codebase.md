@@ -39,6 +39,8 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
+
 
 # vercel
 .vercel
@@ -47,6 +49,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+
 ```
 
 # app\api\auth\[auth0]\route.ts
@@ -54,25 +57,22 @@ next-env.d.ts
 ```ts
 // app/api/auth/[auth0]/route.ts
 
-import { handleAuth, handleCallback } from "@auth0/nextjs-auth0";
-import { PrismaClient } from "@prisma/client";
+import { handleAuth, handleCallback, getSession } from "@auth0/nextjs-auth0";
+import type { NextApiRequest, NextApiResponse } from 'next';
 
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export const GET = handleAuth({
-  callback: async () => {
-    const res = await handleCallback();
-    
+  callback: async (req: NextApiRequest, res: NextApiResponse) => {
     try {
-      // Extract the user information from the session
-      const session = await getSession();
+      const session = await getSession(req, res);
 
-      // If we have a session, ensure the user exists in our database
       if (session?.user) {
         await prisma.user.upsert({
           where: { id: session.user.sub },
-          update: { 
+          update: {
             name: session.user.name || '',
             email: session.user.email || '',
           },
@@ -84,15 +84,20 @@ export const GET = handleAuth({
         });
       }
 
-      return res;
+      // It's crucial to ensure that `handleCallback` is properly awaited
+      return await handleCallback(req, res);
+
     } catch (error) {
       console.error('Error in Auth0 callback:', error);
-      return Response.redirect(new URL('/api/auth/login', new URL(process.env.AUTH0_BASE_URL || 'http://localhost:3000')));
+
+      // Redirect to login on error
+      return Response.redirect(
+        new URL('/api/auth/login', new URL(process.env.AUTH0_BASE_URL || 'http://localhost:3000'))
+      );
     }
   }
 });
 
-import { getSession } from "@auth0/nextjs-auth0";
 ```
 
 # app\api\comments\route.ts
@@ -126,32 +131,39 @@ export async function GET(req: NextRequest) {
   }
 }
 
-
 export async function POST(req: NextRequest) {
-    const session = await getSession();
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-  
-    try {
-      const { recipeId, content } = await req.json();
-  
-      const comment = await prisma.comment.create({
-        data: {
-          content,
-          recipeId,
-          userId: session.user.sub, // Use the Auth0 user ID
-        },
-        include: { user: { select: { id: true, name: true } } },
-      });
-  
-      return NextResponse.json({ comment });
-    } catch (error) {
-      console.error('Error creating comment:', error);
-      return NextResponse.json({ error: 'Error creating comment' }, { status: 500 });
-    }
+  const session = await getSession();
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  
+
+  try {
+    const { recipeId, content } = await req.json();
+
+    const comment = await prisma.comment.create({
+      data: {
+        content,
+        recipe: { connect: { id: recipeId } },
+        user: { connect: { id: session.user.sub } },
+      },
+      include: { user: { select: { id: true, name: true } } },
+    });
+
+    // Create an activity for the new comment
+    await prisma.activity.create({
+      data: {
+        action: 'commented',
+        user: { connect: { id: session.user.sub } },
+        recipe: { connect: { id: recipeId } },
+      },
+    });
+
+    return NextResponse.json({ comment });
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    return NextResponse.json({ error: 'Error creating comment' }, { status: 500 });
+  }
+}
 ```
 
 # app\api\favoriteHandler\route.ts
@@ -194,32 +206,65 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 # app\api\followUsers\route.ts
 
 ```ts
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 
 const prisma = new PrismaClient();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession(req, res);
-  if (!session) {
-    return res.status(401).json({ error: 'Unauthorized' });
+export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { followingId } = req.body;
-
   try {
+    const { followingId } = await req.json();
+
+    if (!followingId) {
+      return NextResponse.json({ error: 'Missing followingId' }, { status: 400 });
+    }
+
     const follow = await prisma.follow.create({
       data: {
-        follower: { connect: { email: session.user.email } },
+        follower: { connect: { id: session.user.sub } },
         following: { connect: { id: followingId } },
       },
     });
 
-    res.status(201).json({ follow });
+    return NextResponse.json({ follow }, { status: 201 });
   } catch (error) {
     console.error('Error following user:', error);
-    res.status(500).json({ error: 'Error following user' });
+    return NextResponse.json({ error: 'Error following user' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await getSession();
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { followingId } = await req.json();
+
+    if (!followingId) {
+      return NextResponse.json({ error: 'Missing followingId' }, { status: 400 });
+    }
+
+    await prisma.follow.delete({
+      where: {
+        followerId_followingId: {
+          followerId: session.user.sub,
+          followingId: followingId,
+        },
+      },
+    });
+
+    return NextResponse.json({ message: 'Unfollowed successfully' });
+  } catch (error) {
+    console.error('Error unfollowing user:', error);
+    return NextResponse.json({ error: 'Error unfollowing user' }, { status: 500 });
   }
 }
 ```
@@ -560,36 +605,69 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 # app\api\recipes\route.ts
 
 ```ts
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 
 const prisma = new PrismaClient();
 
-export async function POST(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession(req, res);
-  if (!session) {
-    return res.status(401).json({ error: 'Unauthorized' });
+export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { title, ingredients, instructions, cookingTime, imageUrl } = req.body;
-
   try {
+    const { title, ingredients, instructions, cookingTime, imageUrl } = await req.json();
+
+    // Validate input
+    if (!title || !ingredients || !instructions || !cookingTime) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
     const recipe = await prisma.recipe.create({
       data: {
         title,
         ingredients,
         instructions,
-        cookingTime,
+        cookingTime: parseInt(cookingTime),
         imageUrl,
-        author: { connect: { email: session.user.email } },
+        author: { connect: { id: session.user.sub } },
       },
     });
 
-    res.status(201).json({ recipe });
+    // Create an activity for the new recipe
+    await prisma.activity.create({
+      data: {
+        action: 'created',
+        user: { connect: { id: session.user.sub } },
+        recipe: { connect: { id: recipe.id } },
+      },
+    });
+
+    return NextResponse.json({ recipe }, { status: 201 });
   } catch (error) {
     console.error('Error creating recipe:', error);
-    res.status(500).json({ error: 'Error creating recipe' });
+    return NextResponse.json({ error: 'Error creating recipe' }, { status: 500 });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const session = await getSession();
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const recipes = await prisma.recipe.findMany({
+      where: { authorId: session.user.sub },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return NextResponse.json({ recipes });
+  } catch (error) {
+    console.error('Error fetching recipes:', error);
+    return NextResponse.json({ error: 'Error fetching recipes' }, { status: 500 });
   }
 }
 
@@ -1406,6 +1484,92 @@ export const useFavorites = () => {
   }
   return context;
 };
+```
+
+# app\dashboard\page.tsx
+
+```tsx
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useUser } from '@auth0/nextjs-auth0/client';
+import { Recipe } from '../types';
+import { RecipeCard } from '../Components/RecipeCard';
+
+export default function Dashboard() {
+  const { user, isLoading } = useUser();
+  const [customRecipes, setCustomRecipes] = useState<Recipe[]>([]);
+  const [favorites, setFavorites] = useState<Recipe[]>([]);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      fetchCustomRecipes();
+      fetchFavorites();
+      fetchFollowCounts();
+    }
+  }, [user]);
+
+  const fetchCustomRecipes = async () => {
+    try {
+      const response = await fetch('/api/recipes');
+      const data = await response.json();
+      setCustomRecipes(data.recipes);
+    } catch (error) {
+      console.error('Error fetching custom recipes:', error);
+    }
+  };
+
+  const fetchFavorites = async () => {
+    try {
+      const response = await fetch('/api/favorites');
+      const data = await response.json();
+      setFavorites(data.favorites);
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
+
+  const fetchFollowCounts = async () => {
+    try {
+      const response = await fetch('/api/followCounts');
+      const data = await response.json();
+      setFollowersCount(data.followersCount);
+      setFollowingCount(data.followingCount);
+    } catch (error) {
+      console.error('Error fetching follow counts:', error);
+    }
+  };
+
+  if (isLoading) return <div>Loading...</div>;
+  if (!user) return <div>Please log in to view your dashboard.</div>;
+
+  return (
+    <div className="container mt-5">
+      <h1>Welcome, {user.name}!</h1>
+      <div className="row mt-4">
+        <div className="col-md-6">
+          <h2>Your Custom Recipes</h2>
+          {customRecipes.map((recipe) => (
+            <RecipeCard key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+        <div className="col-md-6">
+          <h2>Your Favorites</h2>
+          {favorites.map((recipe) => (
+            <RecipeCard key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+      </div>
+      <div className="mt-4">
+        <h2>Social Stats</h2>
+        <p>Followers: {followersCount}</p>
+        <p>Following: {followingCount}</p>
+      </div>
+    </div>
+  );
+}
 ```
 
 # app\favicon.ico
@@ -2523,48 +2687,141 @@ postgresql
 # README.md
 
 ```md
-
-
-# React Challenge
-
-Welcome to the React Challenge project! This project is a recipe management application built with React and Next.js.
+# Recipe Management Application
 
 ## Table of Contents
+1. [Introduction](#introduction)
+2. [Features](#features)
+3. [Technologies](#technologies)
+4. [Getting Started](#getting-started)
+   - [Prerequisites](#prerequisites)
+   - [Installation](#installation)
+   - [Environment Variables](#environment-variables)
+5. [Usage](#usage)
+6. [API Routes](#api-routes)
+7. [Database Schema](#database-schema)
+8. [Authentication](#authentication)
+9. [Contributing](#contributing)
+10. [License](#license)
 
-- [Installation](#installation)
-- [Usage](#usage)
-- [Environment Variables](#environment-variables)
-- [Scripts](#scripts)
-- [Contributing](#contributing)
-- [License](#license)
+## Introduction
 
-## Installation
+This Recipe Management Application is a full-stack web application built with Next.js, React, and TypeScript. It allows users to discover, save, and share recipes, as well as plan meals and interact with other users through a social feed.
 
-To get started with the project, clone the repository and install the dependencies:
+## Features
 
-\`\`\`sh
-git clone https://github.com/olteanalexandru/Junior-Full-Stack-Tech-Challenge
-cd react-challenge
-npm install
+- User authentication with Auth0
+- Recipe search and discovery
+- Favorite recipes
+- Social features (follow users, activity feed)
+- Commenting system
+- Meal planning
+- Premium subscription features
 
+## Technologies
+
+- Next.js 14.2
+- React 18
+- TypeScript
+- Prisma (ORM)
+- PostgreSQL
+- Auth0 (Authentication)
+- Stripe (Payment processing)
+- Bootstrap 5 (Styling)
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v14 or later)
+- npm or yarn
+- PostgreSQL database
+
+### Installation
+
+1. Clone the repository:
+   \`\`\`
+   git clone https://github.com/olteanalexandru/diet_planner.git
+   cd recipe-management-app
+   \`\`\`
+
+2. Install dependencies:
+   \`\`\`
+   npm install
+   \`\`\`
+
+3. Set up your environment variables (see [Environment Variables](#environment-variables) section).
+
+4. Run Prisma migrations:
+   \`\`\`
+   npx prisma migrate dev
+   \`\`\`
+
+5. Start the development server:
+   \`\`\`
+   npm run dev
+   \`\`\`
+
+### Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
+
+\`\`\`
+DATABASE_URL="postgresql://username:password@localhost:5432/recipe_db"
+AUTH0_SECRET='your_auth0_secret'
+AUTH0_BASE_URL='http://localhost:3000'
+AUTH0_ISSUER_BASE_URL='https://your-domain.auth0.com'
+AUTH0_CLIENT_ID='your_client_id'
+AUTH0_CLIENT_SECRET='your_client_secret'
+OPENAI_API_KEY='your_openai_api_key'
+PEXELS_API_KEY='your_pexels_api_key'
+STRIPE_SECRET_KEY='your_stripe_secret_key'
+STRIPE_PRICE_ID='your_stripe_price_id'
+\`\`\`
+
+Replace the placeholder values with your actual credentials.
 
 ## Usage
 
-To start the development server, run the following command:
+After starting the development server, open your browser and navigate to `http://localhost:3000`. You can now use the application to search for recipes, save favorites, plan meals, and interact with other users.
 
-\`\`\`sh
+## API Routes
 
-npm run dev
-\`\`\`
+- `/api/auth/*`: Auth0 authentication routes
+- `/api/recipes`: CRUD operations for recipes
+- `/api/comments`: Get and post comments
+- `/api/followUsers`: Follow/unfollow users
+- `/api/mealPlanning`: Manage meal plans
+- `/api/premium`: Handle premium subscriptions
+- `/api/socialFeed`: Get user activity feed
 
-## Environment Variables
+## Database Schema
 
-The project uses environment variables to configure the application. Create a `.env.local` file in the root of the project and add the following variables:
+The main entities in the database are:
+- User
+- Recipe
+- Comment
+- Follow
+- MealPlan
+- Activity
 
-\`\`\`sh
-OPENAI_API_KEY: Your OpenAI API key.
-PEXELS_API_KEY: Your Pexels API key.
-\`\`\`
+Refer to the `prisma/schema.prisma` file for detailed schema information.
+
+## Authentication
+
+This application uses Auth0 for user authentication. Users can sign up and log in using their email or social accounts configured in your Auth0 application.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License.
+
+
+
+
 ```
 
 # test-connection.js

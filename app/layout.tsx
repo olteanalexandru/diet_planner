@@ -39,7 +39,12 @@ export default function RootLayout({
                 <h1 className="h4 m-0">
                   <Link href="/" className="text-white text-decoration-none">Recipes</Link>
                 </h1>
-                <LoginButton />
+                <nav>
+                  <Link href="/dashboard" className="btn btn-outline-light me-2">Dashboard</Link>
+                  <Link href="/create-recipe" className="btn btn-outline-light me-2">Create Recipe</Link>
+                  <Link href="/social-feed" className="btn btn-outline-light me-2">Social Feed</Link>
+                  <LoginButton />
+                </nav>
               </div>
             </header>
             <div className="container-fluid" style={{ maxWidth: "700px", margin: "0 auto" }}>

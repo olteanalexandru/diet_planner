@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       select: { followingId: true },
     });
 
-    const followingIds = following.map((f: { followingId: any; }) => f.followingId);
+    const followingIds = following.map(f => f.followingId);
 
     const activities = await prisma.activity.findMany({
       where: { userId: { in: followingIds } },
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       take: 50, // Limit to 50 most recent activities
     });
 
-    const formattedActivities = activities.map((activity: { id: any; userId: any; user: { name: any; }; action: any; recipeId: any; recipe: { title: any; }; createdAt: { toISOString: () => any; }; }) => ({
+    const formattedActivities = activities.map(activity => ({
       id: activity.id,
       userId: activity.userId,
       userName: activity.user.name,

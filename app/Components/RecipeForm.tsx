@@ -1,9 +1,11 @@
+'use client';
 import React, { useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { Recipe } from '../types';
+import { useRouter } from 'next/navigation';
 
 export const RecipeForm: React.FC = () => {
   const { user } = useUser();
+  const router = useRouter();
   const [title, setTitle] = useState('');
   const [ingredients, setIngredients] = useState(['']);
   const [instructions, setInstructions] = useState(['']);
@@ -55,6 +57,8 @@ export const RecipeForm: React.FC = () => {
         setInstructions(['']);
         setCookingTime('');
         setImageUrl('');
+        // Redirect to dashboard
+        router.push('/dashboard');
       } else {
         const data = await response.json();
         setError(data.error || 'An error occurred while submitting the recipe');

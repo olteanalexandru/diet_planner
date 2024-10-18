@@ -1,19 +1,34 @@
-// app/Components/FollowButton.tsx
+'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 
 interface FollowButtonProps {
   userId: string;
-  initialIsFollowing: boolean;
 }
 
-export const FollowButton: React.FC<FollowButtonProps> = ({ userId, initialIsFollowing }) => {
+export const FollowButton: React.FC<FollowButtonProps> = ({ userId }) => {
   const { user } = useUser();
-  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleFollow = async () => {
+  useEffect(() => {
+    if (user) {
+      checkFollowStatus();
+    }
+  }, [user, userId]);
+
+  const checkFollowStatus = async () => {
+    try {
+      const response = await fetch(`/api/followUsers?followingId=${userId}`);
+      const data = await response.json();
+      setIsFollowing(data.isFollowing);
+    } catch (error) {
+      console.error('Error checking follow status:', error);
+    }
+  };
+
+  const handleFollowToggle = async () => {
     if (!user) return;
     setIsLoading(true);
 
@@ -41,7 +56,7 @@ export const FollowButton: React.FC<FollowButtonProps> = ({ userId, initialIsFol
   return (
     <button
       className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'}`}
-      onClick={handleFollow}
+      onClick={handleFollowToggle}
       disabled={isLoading}
     >
       {isLoading ? 'Loading...' : (isFollowing ? 'Unfollow' : 'Follow')}

@@ -36,8 +36,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-git add .
-git commit -m "functionalitys"
-git branch -M main
-git remote add origin https://github.com/olteanalexandru/diet_planner.git
-git push -u origin main
+
