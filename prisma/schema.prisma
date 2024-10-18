@@ -1,6 +1,5 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
@@ -14,35 +13,36 @@ generator client {
 }
 
 model User {
-  id                String    @id
-  email             String    @unique
-  name              String?
-  recipes           Recipe[]
-  favorites         Favorite[]
-  following         Follow[]  @relation("UserFollowing")
-  followers         Follow[]  @relation("UserFollowers")
-  mealPlans         MealPlan[]
-  subscriptionStatus String   @default("free")
-  comments          Comment[]
-  activities        Activity[]
+  id                 String        @id
+  email              String        @unique
+  name               String?
+  recipes            Recipe[]
+  favorites          Favorite[]
+  following          Follow[]      @relation("UserFollowing")
+  followers          Follow[]      @relation("UserFollowers")
+  mealPlans          MealPlan[]
+  subscriptionStatus String        @default("free")
+  comments           Comment[]
+  activities         Activity[]
+  CommentLike        CommentLike[]
 }
 
 model Recipe {
-  id              String     @id @default(cuid())
-  title           String
-  ingredients     String[]
-  instructions    String[]
-  cookingTime     Int
-  imageUrl        String?
-  imageUrlLarge   String?    // Add this line
-  author          User       @relation(fields: [authorId], references: [id])
-  authorId        String
-  favorites       Favorite[]
-  mealPlans       MealPlan[]
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  comments        Comment[]
-  activities      Activity[]
+  id            String     @id @default(cuid())
+  title         String
+  ingredients   String[]
+  instructions  String[]
+  cookingTime   Int
+  imageUrl      String?
+  imageUrlLarge String? // New field added
+  author        User       @relation(fields: [authorId], references: [id])
+  authorId      String
+  favorites     Favorite[]
+  mealPlans     MealPlan[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  comments      Comment[]
+  activities    Activity[]
 }
 
 model Favorite {
@@ -51,7 +51,6 @@ model Favorite {
   userId   String
   recipe   Recipe @relation(fields: [recipeId], references: [id])
   recipeId String
-
   @@unique([userId, recipeId])
 }
 
@@ -61,7 +60,6 @@ model Follow {
   followerId  String
   following   User   @relation("UserFollowers", fields: [followingId], references: [id])
   followingId String
-
   @@unique([followerId, followingId])
 }
 
@@ -78,10 +76,24 @@ model Comment {
   id        String   @id @default(cuid())
   content   String
   createdAt DateTime @default(now())
+  updatedAt DateTime? @default(now()) // Optional with default value
   user      User     @relation(fields: [userId], references: [id])
   userId    String
   recipe    Recipe   @relation(fields: [recipeId], references: [id])
   recipeId  String
+  likes     CommentLike[]
+}
+
+
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  comment   Comment  @relation(fields: [commentId], references: [id])
+  commentId String
+  createdAt DateTime @default(now())
+  @@unique([userId, commentId])
 }
 
 model Activity {

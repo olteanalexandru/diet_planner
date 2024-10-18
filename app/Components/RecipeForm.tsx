@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
 
+
 export const RecipeForm: React.FC = () => {
   const { user } = useUser();
   const router = useRouter();
@@ -12,7 +13,10 @@ export const RecipeForm: React.FC = () => {
   const [cookingTime, setCookingTime] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+
 
   const handleAddIngredient = () => {
     setIngredients([...ingredients, '']);
@@ -41,31 +45,36 @@ export const RecipeForm: React.FC = () => {
       return;
     }
 
+    setIsSubmitting(true);
+    setError(null);
+
     try {
       const response = await fetch('/api/recipes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, ingredients, instructions, cookingTime, imageUrl }),
+        body: JSON.stringify({
+          title,
+          ingredients: ingredients.filter(i => i.trim() !== ''),
+          instructions: instructions.filter(i => i.trim() !== ''),
+          cookingTime,
+          imageUrl
+        }),
       });
       
       if (response.ok) {
         setSuccess(true);
-        setError(null);
-        // Clear form
-        setTitle('');
-        setIngredients(['']);
-        setInstructions(['']);
-        setCookingTime('');
-        setImageUrl('');
-        // Redirect to dashboard
         router.push('/dashboard');
       } else {
+
         const data = await response.json();
         setError(data.error || 'An error occurred while submitting the recipe');
       }
     } catch (error) {
       console.error('Error submitting recipe:', error);
       setError('An error occurred while submitting the recipe');
+    } finally {
+      setIsSubmitting(false);
+      
     }
   };
 

@@ -6,6 +6,10 @@ import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 import { v4 as uuidv4 } from 'uuid';
 
+
+
+
+
 const prisma = new PrismaClient();
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -23,6 +27,15 @@ function isValidJSON(str: string) {
   } catch (e) {
     return false;
   }
+}
+
+function normalizeTitle( 
+  title: string
+) {
+  return decodeURIComponent(title)
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export async function POST(req: NextRequest) {
@@ -45,7 +58,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing title or cookingTime in request body' }, { status: 400 });
   }
 
-  const normalisedTitle = title.replace(/[^a-zA-Z0-9\s]/g, '');
+
+  
+  const normalisedTitle = normalizeTitle(title);
 
   let attempts = 0;
   while (attempts < MAX_RETRIES) {
@@ -75,7 +90,14 @@ export async function POST(req: NextRequest) {
         include: { author: true },
       });
 
+
+
+
       if (!recipe) {
+        console.log('Recipe not found in the database, fetching details from OpenAI for title:', normalisedTitle, 'and cooking time:', cookingTime);
+
+
+
         const completion = await openai.chat.completions.create({
           model: "gpt-3.5-turbo",
           messages: [

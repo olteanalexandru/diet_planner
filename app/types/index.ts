@@ -6,8 +6,21 @@ export interface FavouriteRecipeComponentProps {
   setFavorites: React.Dispatch<React.SetStateAction<Recipe[]>>;
 }
 
+export interface Comment {
+  id: string;
+  content: string;
+  user: {
+    id: string;
+    name: string;
+  };
+  likes: number;
+  isLiked: boolean;
+  createdAt: string;
+  userId: string;
+}
 
 export interface Recipe {
+  comments: any;
   id: string;
   title: string;
   ingredients: string[];
