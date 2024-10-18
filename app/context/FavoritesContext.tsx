@@ -4,8 +4,8 @@ import { Recipe } from '../types';
 
 interface FavoritesContextType {
   favorites: Recipe[];
-  addFavorite: (recipe: Recipe) => void;
-  removeFavorite: (recipe: Recipe) => void;
+  addFavorite: (recipe: Recipe) => Promise<void>;
+  removeFavorite: (recipe: Recipe) => Promise<void>;
   isFavorite: (recipe: Recipe) => boolean;
 }
 
@@ -15,24 +15,51 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [favorites, setFavorites] = useState<Recipe[]>([]);
 
   useEffect(() => {
-    const storedFavorites = localStorage.getItem('favorites');
-    if (storedFavorites) {
-      setFavorites(JSON.parse(storedFavorites));
-    }
+    fetchFavorites();
   }, []);
 
-  useEffect(() => {
-   localStorage.setItem('favorites', JSON.stringify(favorites));
-  }, [favorites]);
-
-  const addFavorite = (recipe: Recipe) => {
-    setFavorites((prevFavorites) => [...prevFavorites, recipe]);
+  const fetchFavorites = async () => {
+    try {
+      const response = await fetch('/api/favorites');
+      if (response.ok) {
+        const data = await response.json();
+        setFavorites(data.favorites);
+      }
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
   };
 
-  const removeFavorite = (recipe: Recipe) => {
-    setFavorites((prevFavorites) =>
-      prevFavorites.filter((fav) => fav.id !== recipe.id)
-    );
+  const addFavorite = async (recipe: Recipe) => {
+    try {
+      const response = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipeId: recipe.id }),
+      });
+      if (response.ok) {
+        setFavorites((prevFavorites) => [...prevFavorites, recipe]);
+      }
+    } catch (error) {
+      console.error('Error adding favorite:', error);
+    }
+  };
+
+  const removeFavorite = async (recipe: Recipe) => {
+    try {
+      const response = await fetch('/api/favorites', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipeId: recipe.id }),
+      });
+      if (response.ok) {
+        setFavorites((prevFavorites) =>
+          prevFavorites.filter((fav) => fav.id !== recipe.id)
+        );
+      }
+    } catch (error) {
+      console.error('Error removing favorite:', error);
+    }
   };
 
   const isFavorite = (recipe: Recipe) => {

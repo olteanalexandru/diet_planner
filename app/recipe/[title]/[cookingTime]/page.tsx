@@ -6,6 +6,7 @@ import { Recipe, Comment } from '../../../types';
 import { RecipeSkeleton } from './RecipeSkeleton';
 import { FollowButton } from '../../../Components/FollowButton';
 import { Heart } from 'lucide-react';
+import { useFavorites } from '../../../context/FavoritesContext';
 
 export default function RecipeDetails() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -18,6 +19,7 @@ export default function RecipeDetails() {
   const [newComment, setNewComment] = useState('');
   const { user } = useUser();
   const router = useRouter();
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites();
 
   useEffect(() => {
     if (title && cookingTime) {
@@ -99,6 +101,21 @@ export default function RecipeDetails() {
       setError('Failed to delete recipe');
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  const toggleFavorite = async () => {
+    if (!recipe) return;
+    try {
+      if (isFavorite(recipe)) {
+        await removeFavorite(recipe);
+      } else {
+        await addFavorite(recipe);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      setError('Failed to update favorite');
     }
   };
 
@@ -266,6 +283,12 @@ export default function RecipeDetails() {
               <img src={recipe.imageUrlLarge} alt={recipe.title} className="img-fluid mb-4" style={{ width: '20rem', height: 'auto' }} />
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h1 className="mb-0">{recipe.title}</h1>
+                <button
+              className="btn btn-link"
+              onClick={toggleFavorite}
+            >
+              <Heart size={24} color="#65558F" fill={isFavorite(recipe) ? '#65558F' : 'none'} />
+            </button>
                 {user && user.sub === recipe.authorId && (
                   <div>
                     <button className="btn btn-primary me-2" onClick={handleEdit}>Edit</button>
