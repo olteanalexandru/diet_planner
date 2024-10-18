@@ -7,47 +7,42 @@ import { RecipeSkeleton } from './RecipeSkeleton';
 import { FollowButton } from '../../../Components/FollowButton';
 import { Heart } from 'lucide-react';
 import { useFavorites } from '../../../context/FavoritesContext';
+import { useRecipes } from '../../../context/RecipeContext';
+import { useComments } from '../../../context/CommentContext';
 
 export default function RecipeDetails() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedRecipe, setEditedRecipe] = useState<Recipe | null>(null);
   const { title, cookingTime } = useParams() as { title: string; cookingTime: string };
-  const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const { user } = useUser();
   const router = useRouter();
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
+  const { loading, error, fetchRecipeDetails } = useRecipes();
+  const { comments, addComment, editComment, deleteComment, likeComment, unlikeComment } = useComments();
 
   useEffect(() => {
     if (title && cookingTime) {
-      fetchRecipeDetails(title, cookingTime);
-    }
-  }, [title, cookingTime]);
-
-  const fetchRecipeDetails = async (title: string, cookingTime: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/getRecipeDetails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, cookingTime }),
+      fetchRecipeDetails(title, cookingTime).then(fetchedRecipe => {
+        if (fetchedRecipe) {
+          setRecipe(fetchedRecipe);
+          setEditedRecipe(fetchedRecipe);
+        }
       });
-      if (!response.ok) {
-        throw new Error('Failed to fetch recipe details');
+    }
+  }, [title, cookingTime, fetchRecipeDetails]);
+
+  const toggleFavorite = async () => {
+    if (!recipe) return;
+    try {
+      if (isFavorite(recipe)) {
+        await removeFavorite(recipe);
+      } else {
+        await addFavorite(recipe);
       }
-      const data = await response.json();
-      setRecipe(data.recipe);
-      setEditedRecipe(data.recipe);
-      setComments(data.recipe.comments || []); // Ensure comments is always an array
     } catch (error) {
-      console.error('Error fetching recipe details:', error);
-      setError('Failed to load recipe details');
-    } finally {
-      setLoading(false);
+      console.error('Error toggling favorite:', error);
     }
   };
 
@@ -62,166 +57,41 @@ export default function RecipeDetails() {
 
   const handleSaveEdit = async () => {
     if (!editedRecipe) return;
-    setLoading(true);
-    setError(null);
     try {
       const response = await fetch(`/api/recipes/${recipe?.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editedRecipe),
       });
-      if (!response.ok) {
-        throw new Error('Failed to update recipe');
+      if (response.ok) {
+        const data = await response.json();
+        setRecipe(data.recipe);
+        setIsEditing(false);
       }
-      const data = await response.json();
-      setRecipe(data.recipe);
-      setIsEditing(false);
     } catch (error) {
       console.error('Error updating recipe:', error);
-      setError('Failed to update recipe');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleRecipeDelete = async () => {
     if (!recipe) return;
-    setLoading(true);
-    setError(null);
     try {
       const response = await fetch(`/api/recipes/${recipe.id}`, {
         method: 'DELETE',
       });
-      if (!response.ok) {
-        throw new Error('Failed to delete recipe');
+      if (response.ok) {
+        router.push('/');
       }
-      router.push('/');
     } catch (error) {
       console.error('Error deleting recipe:', error);
-      setError('Failed to delete recipe');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-  const toggleFavorite = async () => {
-    if (!recipe) return;
-    try {
-      if (isFavorite(recipe)) {
-        await removeFavorite(recipe);
-      } else {
-        await addFavorite(recipe);
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      setError('Failed to update favorite');
     }
   };
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !recipe) return;
-
-    try {
-      const response = await fetch('/api/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipeId: recipe.id, content: newComment }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setComments(prevComments => [...prevComments, data.comment]);
-        setNewComment('');
-      } else {
-        throw new Error('Failed to submit comment');
-      }
-    } catch (error) {
-      console.error('Error submitting comment:', error);
-      setError('Failed to submit comment');
-    }
-  };
-
-  const handleCommentEdit = async (commentId: string, newContent: string) => {
-    try {
-      const response = await fetch(`/api/comments/${commentId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newContent }),
-      });
-
-      if (response.ok) {
-        const updatedComment = await response.json();
-        setComments(prevComments => prevComments.map(comment => 
-          comment.id === commentId ? updatedComment.comment : comment
-        ));
-      } else {
-        throw new Error('Failed to edit comment');
-      }
-    } catch (error) {
-      console.error('Error editing comment:', error);
-      setError('Failed to edit comment');
-    }
-  };
-
-  const handleCommentDelete = async (commentId: string) => {
-    try {
-      const response = await fetch(`/api/comments/${commentId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
-      } else {
-        throw new Error('Failed to delete comment');
-      }
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      setError('Failed to delete comment');
-    }
-  };
-
-  const handleLikeComment = async (commentId: string) => {
-    try {
-      const response = await fetch(`/api/comments/${commentId}/like`, {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        setComments(prevComments => prevComments.map(comment => 
-          comment.id === commentId 
-            ? { ...comment, likes: comment.likes + 1, isLiked: true } 
-            : comment
-        ));
-      } else {
-        throw new Error('Failed to like comment');
-      }
-    } catch (error) {
-      console.error('Error liking comment:', error);
-      setError('Failed to like comment');
-    }
-  };
-
-  const handleUnlikeComment = async (commentId: string) => {
-    try {
-      const response = await fetch(`/api/comments/${commentId}/like`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setComments(prevComments => prevComments.map(comment => 
-          comment.id === commentId 
-            ? { ...comment, likes: comment.likes - 1, isLiked: false } 
-            : comment
-        ));
-      } else {
-        throw new Error('Failed to unlike comment');
-      }
-    } catch (error) {
-      console.error('Error unliking comment:', error);
-      setError('Failed to unlike comment');
-    }
+    await addComment(recipe.id, newComment);
+    setNewComment('');
   };
 
   if (loading) return <RecipeSkeleton />;
@@ -284,19 +154,19 @@ export default function RecipeDetails() {
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h1 className="mb-0">{recipe.title}</h1>
                 <button
-              className="btn btn-link"
-              onClick={toggleFavorite}
-            >
-              <Heart size={24} color="#65558F" fill={isFavorite(recipe) ? '#65558F' : 'none'} />
-            </button>
-                {user && user.sub === recipe.authorId && (
-                  <div>
-                    <button className="btn btn-primary me-2" onClick={handleEdit}>Edit</button>
-                    <button className="btn btn-danger" onClick={handleRecipeDelete}>Delete</button>
-                  </div>
-                )}
+                  className="btn btn-link"
+                  onClick={toggleFavorite}
+                >
+                  <Heart size={24} color="#65558F" fill={isFavorite(recipe) ? '#65558F' : 'none'} />
+                </button>
               </div>
               <p className="text-muted">{recipe.cookingTime} mins</p>
+              {user && user.sub === recipe.authorId && (
+                <div>
+                  <button className="btn btn-primary me-2" onClick={handleEdit}>Edit</button>
+                  <button className="btn btn-danger" onClick={handleRecipeDelete}>Delete</button>
+                </div>
+              )}
             </div>
             <div className="col-md-6">
               <h2 className="mt-4">Ingredients:</h2>
@@ -316,21 +186,21 @@ export default function RecipeDetails() {
 
           <div className="mt-5">
             <h3>Comments</h3>
-            {comments.map((comment) => (
+            {comments.map((comment: Comment) => (
               <div key={comment.id} className="mb-3">
                 <strong>{comment.user.name}</strong>
                 <p>{comment.content}</p>
                 <small className="text-muted">{new Date(comment.createdAt).toLocaleString()}</small>
                 <button 
                   className="btn btn-sm btn-outline-primary ms-2" 
-                  onClick={() => comment.isLiked ? handleUnlikeComment(comment.id) : handleLikeComment(comment.id)}
+                  onClick={() => comment.isLiked ? unlikeComment(comment.id) : likeComment(comment.id)}
                 >
                   <Heart size={16} fill={comment.isLiked ? '#007bff' : 'none'} /> {comment.likes}
                 </button>
                 {user && user.sub === comment.userId && (
                   <>
-                    <button className="btn btn-sm btn-outline-secondary ms-2" onClick={() => handleCommentEdit(comment.id, comment.content)}>Edit</button>
-                    <button className="btn btn-sm btn-outline-danger ms-2" onClick={() => handleCommentDelete(comment.id)}>Delete</button>
+                    <button className="btn btn-sm btn-outline-secondary ms-2" onClick={() => editComment(comment.id, comment.content)}>Edit</button>
+                    <button className="btn btn-sm btn-outline-danger ms-2" onClick={() => deleteComment(comment.id)}>Delete</button>
                   </>
                 )}
               </div>

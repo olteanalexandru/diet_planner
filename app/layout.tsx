@@ -1,12 +1,12 @@
-
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { FavoritesProvider } from './context/FavoritesContext';
+import { RecipeProvider } from './context/RecipeContext';
+import { CommentProvider } from './context/CommentContext';
 import { UserProvider } from '@auth0/nextjs-auth0/client';
-import { LoginButton } from './Components/LoginButton';
-import Link from 'next/link';
+import { Header } from './Components/Header';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -20,8 +20,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Recipe App",
-  description: "A modern recipe management application",
+  title: "FutureRecipes",
+  description: "A modern recipe management application for the future of cooking",
 };
 
 export default function RootLayout({
@@ -31,26 +31,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} bg-dark text-light`}>
         <UserProvider>
-          <FavoritesProvider>
-            <header className="bg-primary text-white py-3">
-              <div className="container d-flex justify-content-between align-items-center">
-                <h1 className="h4 m-0">
-                  <Link href="/" className="text-white text-decoration-none">Recipes</Link>
-                </h1>
-                <nav>
-                  <Link href="/dashboard" className="btn btn-outline-light me-2">Dashboard</Link>
-                  <Link href="/create-recipe" className="btn btn-outline-light me-2">Create Recipe</Link>
-                  <Link href="/social-feed" className="btn btn-outline-light me-2">Social Feed</Link>
-                  <LoginButton />
-                </nav>
-              </div>
-            </header>
-            <div className="container-fluid" style={{ maxWidth: "700px", margin: "0 auto" }}>
-              {children}
-            </div>
-          </FavoritesProvider>
+          <RecipeProvider>
+            <CommentProvider>
+              <FavoritesProvider>
+                <Header />
+                <main className="container py-4">
+                  <div className="row justify-content-center">
+                    <div className="col-lg-10">
+                      <div className="bg-light bg-opacity-10 p-4 rounded-3 shadow-lg">
+                        {children}
+                      </div>
+                    </div>
+                  </div>
+                </main>
+              </FavoritesProvider>
+            </CommentProvider>
+          </RecipeProvider>
         </UserProvider>
       </body>
     </html>
