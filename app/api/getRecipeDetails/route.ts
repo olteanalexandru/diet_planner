@@ -6,10 +6,6 @@ import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 import { v4 as uuidv4 } from 'uuid';
 
-
-
-
-
 const prisma = new PrismaClient();
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -29,9 +25,7 @@ function isValidJSON(str: string) {
   }
 }
 
-function normalizeTitle( 
-  title: string
-) {
+function normalizeTitle(title: string) {
   return decodeURIComponent(title)
     .replace(/[^a-zA-Z0-9\s]/g, '')
     .replace(/\s+/g, ' ')
@@ -58,8 +52,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing title or cookingTime in request body' }, { status: 400 });
   }
 
-
-  
   const normalisedTitle = normalizeTitle(title);
 
   let attempts = 0;
@@ -87,11 +79,19 @@ export async function POST(req: NextRequest) {
           title: { equals: normalisedTitle, mode: 'insensitive' },
           cookingTime: parseInt(cookingTime),
         },
-        include: { author: true },
+        include: {
+          author: true,
+          comments: {
+            include: {
+              user: true,
+              likes: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+        },
       });
-
-
-
 
       if (!recipe) {
         console.log('Recipe not found in the database, fetching details from OpenAI for title:', normalisedTitle, 'and cooking time:', cookingTime);
@@ -162,8 +162,19 @@ export async function POST(req: NextRequest) {
             imageUrl: recipeImageUrl,
             imageUrlLarge: recipeImageUrlLarge,
             author: { connect: { id: user.id } },
+            comments: {
+              create: [], // Initialize with an empty array 
+            },
           },
-          include: { author: true },
+          include: {
+            author: true,
+            comments: {
+              include: {
+                user: true,
+                likes: true,
+              },
+            },
+          },
         });
 
         // Create an activity for the new recipe
@@ -176,21 +187,26 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return NextResponse.json({ recipe });
-    } catch (error) {
-      attempts++;
-      console.error(`Attempt ${attempts} failed:`, error);
-      if (attempts >= MAX_RETRIES) {
-        return NextResponse.json({ error: 'Error fetching recipe details after multiple attempts' }, { status: 500 });
-      }
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+     // Process comments and likes
+     const commentsWithLikes = recipe.comments.map((comment: any) => ({
+      ...comment,
+      likes: comment.likes.length,
+      isLiked: comment.likes.some((like: { userId: string }) => like.userId === session.user!.sub),
+    }));
+
+    return NextResponse.json({
+      recipe: {
+        ...recipe,
+        comments: commentsWithLikes,
+      },
+    });
+  } catch (error) {
+    attempts++;
+    console.error(`Attempt ${attempts} failed:`, error);
+    if (attempts >= MAX_RETRIES) {
+      return NextResponse.json({ error: 'Error fetching recipe details after multiple attempts' }, { status: 500 });
     }
+    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
   }
 }
-
-
-
-
-
-
-
+}

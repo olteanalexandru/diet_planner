@@ -14,17 +14,39 @@ export async function PUT(req: NextRequest, { params }: { params: { commentId: s
   const { content } = await req.json();
 
   try {
-    const comment = await prisma.comment.update({
+    const comment = await prisma.comment.findUnique({
       where: { id: commentId },
-      data: { content },
       include: { user: true },
     });
+
+    if (!comment) {
+      return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
+    }
 
     if (comment.userId !== session.user.sub) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    return NextResponse.json({ comment });
+    const updatedComment = await prisma.comment.update({
+      where: { id: commentId },
+      data: { 
+        content,
+        updatedAt: new Date(),
+      },
+      include: { 
+        user: true,
+        likes: true,
+      },
+    });
+
+    return NextResponse.json({
+      comment: {
+        ...updatedComment,
+        likes: updatedComment.likes.length,
+        isLiked: updatedComment.likes.some((like: { userId: string }) => like.userId === session.user.sub),
+        isEdited: updatedComment.createdAt.getTime() !== updatedComment?.updatedAt?.getTime(),
+      }
+    });
   } catch (error) {
     console.error('Error updating comment:', error);
     return NextResponse.json({ error: 'Error updating comment' }, { status: 500 });
@@ -40,7 +62,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { commentId
   const { commentId } = params;
 
   try {
-    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    const comment = await prisma.comment.findUnique({ 
+      where: { id: commentId },
+      include: { user: true }
+    });
 
     if (!comment) {
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
@@ -50,6 +75,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { commentId
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
+    // Delete associated likes first
+    await prisma.commentLike.deleteMany({
+      where: { commentId: commentId }
+    });
+
+    // Then delete the comment
     await prisma.comment.delete({ where: { id: commentId } });
 
     return NextResponse.json({ message: 'Comment deleted successfully' });

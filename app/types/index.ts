@@ -17,6 +17,7 @@ export interface Comment {
   isLiked: boolean;
   createdAt: string;
   userId: string;
+  updatedAt: string;
 }
 
 export interface Recipe {

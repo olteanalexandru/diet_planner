@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { Comment } from './Comment';
-import { Recipe as RecipeType } from '../types';
+import { Recipe as RecipeType, Comment as CommentType } from '../types';
 
 interface RecipeProps {
   recipe: RecipeType;
@@ -13,6 +13,11 @@ export const Recipe: React.FC<RecipeProps> = ({ recipe, onDelete, onEdit }) => {
   const { user } = useUser();
   const [isEditing, setIsEditing] = useState(false);
   const [editedRecipe, setEditedRecipe] = useState(recipe);
+  const [comments, setComments] = useState<CommentType[]>(recipe.comments || []);
+
+  useEffect(() => {
+    setComments(recipe.comments || []);
+  }, [recipe]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -53,13 +58,90 @@ export const Recipe: React.FC<RecipeProps> = ({ recipe, onDelete, onEdit }) => {
     }
   };
 
+  const handleCommentDelete = async (commentId: string) => {
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
+      } else {
+        const errorData = await response.json();
+        console.error('Error deleting comment:', errorData.error);
+        
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      
+
+    }
+  };
+
+  const handleCommentEdit = async (commentId: string, newContent: string) => {
+    console.log('Editing comment:', commentId, newContent);
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newContent }),
+      });
+      if (response.ok) {
+        const { comment: updatedComment } = await response.json();
+        setComments(prevComments =>
+          prevComments.map(comment =>
+            comment.id === commentId ? updatedComment : comment
+          )
+        );
+      } else {
+        const errorData = await response.json();
+        console.error('Error editing comment:', errorData.error);
+      }
+    } catch (error) {
+      console.error('Error editing comment:', error);
+    }
+  };
+
+  const handleCommentLike = async (commentId: string) => {
+    try {
+      const response = await fetch(`/api/comments/${commentId}/like`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        setComments(comments.map(comment =>
+          comment.id === commentId
+            ? { ...comment, likes: comment.likes + 1, isLiked: true }
+            : comment
+        ));
+      }
+    } catch (error) {
+      console.error('Error liking comment:', error);
+    }
+  };
+
+  const handleCommentUnlike = async (commentId: string) => {
+    try {
+      const response = await fetch(`/api/comments/${commentId}/like`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setComments(comments.map(comment =>
+          comment.id === commentId
+            ? { ...comment, likes: comment.likes - 1, isLiked: false }
+            : comment
+        ));
+      }
+    } catch (error) {
+      console.error('Error unliking comment:', error);
+    }
+  };
+
   return (
     <div className="recipe">
       {isEditing ? (
         <>
           <input
             value={editedRecipe.title}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditedRecipe({ ...editedRecipe, title: e.target.value })}
+            onChange={(e) => setEditedRecipe({ ...editedRecipe, title: e.target.value })}
           />
           {/* Add more fields for editing ingredients, instructions, etc. */}
           <button onClick={handleSaveEdit}>Save</button>
@@ -75,25 +157,19 @@ export const Recipe: React.FC<RecipeProps> = ({ recipe, onDelete, onEdit }) => {
               <button onClick={handleDelete}>Delete</button>
             </>
           )}
+          {/* Display comments */}
+          {comments.map((comment: CommentType) => (
+            <Comment
+              key={comment.id}
+              comment={comment}
+              onDelete={handleCommentDelete}
+              onEdit={handleCommentEdit}
+              onLike={handleCommentLike}
+              onUnlike={handleCommentUnlike}
+            />
+          ))}
         </>
       )}
-      {/* Display comments */}
-      {recipe.comments && recipe.comments.map((comment: { id: any; content?: string; user?: { id: string; name: string; }; likes?: number; isLiked?: boolean; }) => (
-        comment.content && comment.user && comment.likes !== undefined && comment.isLiked !== undefined && (
-          <Comment
-            key={comment.id}
-            comment={{
-              id: comment.id,
-              content: comment.content,
-              user: comment.user,
-              likes: comment.likes,
-              isLiked: comment.isLiked
-            }}
-            onDelete={(commentId: string) => {/* Implement comment delete */}}
-            onEdit={(commentId: string, newContent: string) => {/* Implement comment edit */}}
-          />
-        )
-      ))}
     </div>
   );
 };

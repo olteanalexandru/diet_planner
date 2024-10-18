@@ -1,18 +1,6 @@
 import React, { useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 
-
-
-let LikeButton: React.FC<{ onClick: () => void; liked: boolean; likes: number }> = ({ onClick, liked, likes }) => {
-    return (
-        <button onClick={onClick}>
-        {liked ? 'Unlike' : 'Like'} ({likes})
-        </button>
-    );
-    }
-
-    
-
 interface CommentProps {
   comment: {
     id: string;
@@ -23,28 +11,19 @@ interface CommentProps {
     };
     likes: number;
     isLiked: boolean;
+    createdAt: string;
+    updatedAt: string;
   };
   onDelete: (commentId: string) => void;
   onEdit: (commentId: string, newContent: string) => void;
+  onLike: (commentId: string) => void;
+  onUnlike: (commentId: string) => void;
 }
 
-export const Comment: React.FC<CommentProps> = ({ comment, onDelete, onEdit }) => {
+export const Comment: React.FC<CommentProps> = ({ comment, onDelete, onEdit, onLike, onUnlike }) => {
   const { user } = useUser();
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(comment.content);
-
-  const handleLike = async () => {
-    try {
-      const response = await fetch(`/api/comments/${comment.id}/like`, {
-        method: comment.isLiked ? 'DELETE' : 'POST',
-      });
-      if (response.ok) {
-        // Update the comment's like status and count in the parent component
-      }
-    } catch (error) {
-      console.error('Error liking/unliking comment:', error);
-    }
-  };
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -59,6 +38,16 @@ export const Comment: React.FC<CommentProps> = ({ comment, onDelete, onEdit }) =
     setEditedContent(comment.content);
     setIsEditing(false);
   };
+
+  const handleLikeToggle = () => {
+    if (comment.isLiked) {
+      onUnlike(comment.id);
+    } else {
+      onLike(comment.id);
+    }
+  };
+
+  const isEdited = new Date(comment.updatedAt).getTime() !== new Date(comment.createdAt).getTime();
 
   return (
     <div className="comment">
@@ -75,17 +64,16 @@ export const Comment: React.FC<CommentProps> = ({ comment, onDelete, onEdit }) =
         <>
           <p>{comment.content}</p>
           <p>By: {comment.user.name}</p>
-          <LikeButton
-            onClick={handleLike}
-            liked={comment.isLiked}
-            likes={comment.likes}
-          />
+          <button onClick={handleLikeToggle}>
+            {comment.isLiked ? 'Unlike' : 'Like'} ({comment.likes})
+          </button>
           {user && user.sub === comment.user.id && (
             <>
               <button onClick={handleEdit}>Edit</button>
               <button onClick={() => onDelete(comment.id)}>Delete</button>
             </>
           )}
+          {isEdited && <small className="text-muted">Edited</small>}
         </>
       )}
     </div>

@@ -76,21 +76,20 @@ model Comment {
   id        String   @id @default(cuid())
   content   String
   createdAt DateTime @default(now())
-  updatedAt DateTime? @default(now()) // Optional with default value
+  updatedAt DateTime? @default(now())
   user      User     @relation(fields: [userId], references: [id])
   userId    String
   recipe    Recipe   @relation(fields: [recipeId], references: [id])
   recipeId  String
-  likes     CommentLike[]
+  likes     CommentLike[] @relation("CommentLikes")
 }
-
 
 
 model CommentLike {
   id        String   @id @default(cuid())
   user      User     @relation(fields: [userId], references: [id])
   userId    String
-  comment   Comment  @relation(fields: [commentId], references: [id])
+  comment   Comment  @relation("CommentLikes", fields: [commentId], references: [id], onDelete: Cascade)
   commentId String
   createdAt DateTime @default(now())
   @@unique([userId, commentId])

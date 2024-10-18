@@ -30,7 +30,6 @@ export default function RecipeDetails() {
     setError(null);
     try {
       const response = await fetch('/api/getRecipeDetails', {
-
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, cookingTime }),
@@ -41,7 +40,7 @@ export default function RecipeDetails() {
       const data = await response.json();
       setRecipe(data.recipe);
       setEditedRecipe(data.recipe);
-      setComments(data.recipe.comments);
+      setComments(data.recipe.comments || []); // Ensure comments is always an array
     } catch (error) {
       console.error('Error fetching recipe details:', error);
       setError('Failed to load recipe details');
@@ -116,7 +115,7 @@ export default function RecipeDetails() {
 
       if (response.ok) {
         const data = await response.json();
-        setComments([...comments, data.comment]);
+        setComments(prevComments => [...prevComments, data.comment]);
         setNewComment('');
       } else {
         throw new Error('Failed to submit comment');
@@ -137,7 +136,7 @@ export default function RecipeDetails() {
 
       if (response.ok) {
         const updatedComment = await response.json();
-        setComments(comments.map(comment => 
+        setComments(prevComments => prevComments.map(comment => 
           comment.id === commentId ? updatedComment.comment : comment
         ));
       } else {
@@ -156,7 +155,7 @@ export default function RecipeDetails() {
       });
 
       if (response.ok) {
-        setComments(comments.filter(comment => comment.id !== commentId));
+        setComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
       } else {
         throw new Error('Failed to delete comment');
       }
@@ -173,7 +172,7 @@ export default function RecipeDetails() {
       });
 
       if (response.ok) {
-        setComments(comments.map(comment => 
+        setComments(prevComments => prevComments.map(comment => 
           comment.id === commentId 
             ? { ...comment, likes: comment.likes + 1, isLiked: true } 
             : comment
@@ -194,7 +193,7 @@ export default function RecipeDetails() {
       });
 
       if (response.ok) {
-        setComments(comments.map(comment => 
+        setComments(prevComments => prevComments.map(comment => 
           comment.id === commentId 
             ? { ...comment, likes: comment.likes - 1, isLiked: false } 
             : comment
@@ -225,7 +224,7 @@ export default function RecipeDetails() {
                 className="form-control"
                 id="title"
                 value={editedRecipe?.title || ''}
-                onChange={(e) => setEditedRecipe({ ...editedRecipe!, title: e.target.value })}
+                onChange={(e) => setEditedRecipe(prev => prev ? {...prev, title: e.target.value} : null)}
               />
             </div>
             <div className="mb-3">
@@ -235,7 +234,7 @@ export default function RecipeDetails() {
                 className="form-control"
                 id="cookingTime"
                 value={editedRecipe?.cookingTime || ''}
-                onChange={(e) => setEditedRecipe({ ...editedRecipe!, cookingTime: e.target.value })}
+                onChange={(e) => setEditedRecipe(prev => prev ? {...prev, cookingTime: e.target.value} : null)}
               />
             </div>
             <div className="mb-3">
@@ -244,7 +243,7 @@ export default function RecipeDetails() {
                 className="form-control"
                 id="ingredients"
                 value={editedRecipe?.ingredients.join('\n') || ''}
-                onChange={(e) => setEditedRecipe({ ...editedRecipe!, ingredients: e.target.value.split('\n') })}
+                onChange={(e) => setEditedRecipe(prev => prev ? {...prev, ingredients: e.target.value.split('\n')} : null)}
               />
             </div>
             <div className="mb-3">
@@ -253,7 +252,7 @@ export default function RecipeDetails() {
                 className="form-control"
                 id="instructions"
                 value={editedRecipe?.instructions.join('\n') || ''}
-                onChange={(e) => setEditedRecipe({ ...editedRecipe!, instructions: e.target.value.split('\n') })}
+                onChange={(e) => setEditedRecipe(prev => prev ? {...prev, instructions: e.target.value.split('\n')} : null)}
               />
             </div>
             <button type="submit" className="btn btn-primary me-2">Save Changes</button>
@@ -294,7 +293,7 @@ export default function RecipeDetails() {
 
           <div className="mt-5">
             <h3>Comments</h3>
-            {comments?.map((comment) => (
+            {comments.map((comment) => (
               <div key={comment.id} className="mb-3">
                 <strong>{comment.user.name}</strong>
                 <p>{comment.content}</p>
@@ -341,4 +340,3 @@ export default function RecipeDetails() {
     </div>
   );
 }
-
