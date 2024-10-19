@@ -2,13 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { Recipe, Comment } from '../../../types';
+import { Recipe, Comment as CommentType } from '../../../types';
 import { RecipeSkeleton } from './RecipeSkeleton';
 import { FollowButton } from '../../../Components/FollowButton';
 import { Heart } from 'lucide-react';
 import { useFavorites } from '../../../context/FavoritesContext';
 import { useRecipes } from '../../../context/RecipeContext';
 import { useComments } from '../../../context/CommentContext';
+import { Comment } from '../../../Components/Comment';
+
+const MAX_COMMENTS = 5;
+const MAX_COMMENT_LENGTH = 500;
 
 export default function RecipeDetails() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -90,8 +94,24 @@ export default function RecipeDetails() {
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !recipe) return;
+    if (newComment.length > MAX_COMMENT_LENGTH) {
+      alert(`Comment is too long. Maximum length is ${MAX_COMMENT_LENGTH} characters.`);
+      return;
+    }
+    if (comments.length >= MAX_COMMENTS) {
+      alert(`Maximum number of comments (${MAX_COMMENTS}) reached.`);
+      return;
+    }
     await addComment(recipe.id, newComment);
     setNewComment('');
+  };
+
+  const handleCommentEdit = async (commentId: string, content: string) => {
+    if (content.length > MAX_COMMENT_LENGTH) {
+      alert(`Comment is too long. Maximum length is ${MAX_COMMENT_LENGTH} characters.`);
+      return;
+    }
+    await editComment(commentId, content);
   };
 
   if (loading) return <RecipeSkeleton />;
@@ -185,27 +205,18 @@ export default function RecipeDetails() {
           </div>
 
           <div className="mt-5">
-            <h3>Comments</h3>
-            {comments.map((comment: Comment) => (
-              <div key={comment.id} className="mb-3">
-                <strong>{comment.user.name}</strong>
-                <p>{comment.content}</p>
-                <small className="text-muted">{new Date(comment.createdAt).toLocaleString()}</small>
-                <button 
-                  className="btn btn-sm btn-outline-primary ms-2" 
-                  onClick={() => comment.isLiked ? unlikeComment(comment.id) : likeComment(comment.id)}
-                >
-                  <Heart size={16} fill={comment.isLiked ? '#007bff' : 'none'} /> {comment.likes}
-                </button>
-                {user && user.sub === comment.userId && (
-                  <>
-                    <button className="btn btn-sm btn-outline-secondary ms-2" onClick={() => editComment(comment.id, comment.content)}>Edit</button>
-                    <button className="btn btn-sm btn-outline-danger ms-2" onClick={() => deleteComment(comment.id)}>Delete</button>
-                  </>
-                )}
-              </div>
+            <h3>Comments ({comments.length}/{MAX_COMMENTS})</h3>
+            {comments.map((comment: CommentType) => (
+              <Comment
+                key={comment.id}
+                comment={comment}
+                onDelete={deleteComment}
+                onEdit={handleCommentEdit}
+                onLike={likeComment}
+                onUnlike={unlikeComment}
+              />
             ))}
-            {user && (
+            {user && comments.length < MAX_COMMENTS && (
               <form onSubmit={handleCommentSubmit}>
                 <div className="mb-3">
                   <label htmlFor="comment" className="form-label">Add a comment</label>
@@ -214,8 +225,10 @@ export default function RecipeDetails() {
                     id="comment"
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
+                    maxLength={MAX_COMMENT_LENGTH}
                     required
                   />
+                  <small className="text-muted">{newComment.length}/{MAX_COMMENT_LENGTH} characters</small>
                 </div>
                 <button type="submit" className="btn btn-primary">Submit Comment</button>
               </form>
@@ -231,5 +244,5 @@ export default function RecipeDetails() {
         </div>
       )}
     </div>
-  );
+  )
 }

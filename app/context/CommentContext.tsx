@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Comment } from '../types';
 
 interface CommentContextType {
@@ -57,9 +57,10 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const likeComment = async (commentId: string) => {
     try {
-      await fetch(`/api/comments/${commentId}/like`, { method: 'POST' });
+      const response = await fetch(`/api/comments/${commentId}/like`, { method: 'POST' });
+      const data = await response.json();
       setComments(prevComments => prevComments.map(comment => 
-        comment.id === commentId ? { ...comment, likes: comment.likes + 1, isLiked: true } : comment
+        comment.id === commentId ? { ...comment, likes: data.likes, isLiked: true } : comment
       ));
     } catch (error) {
       console.error('Error liking comment:', error);
@@ -68,9 +69,10 @@ export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const unlikeComment = async (commentId: string) => {
     try {
-      await fetch(`/api/comments/${commentId}/like`, { method: 'DELETE' });
+      const response = await fetch(`/api/comments/${commentId}/like`, { method: 'DELETE' });
+      const data = await response.json();
       setComments(prevComments => prevComments.map(comment => 
-        comment.id === commentId ? { ...comment, likes: comment.likes - 1, isLiked: false } : comment
+        comment.id === commentId ? { ...comment, likes: data.likes, isLiked: false } : comment
       ));
     } catch (error) {
       console.error('Error unliking comment:', error);

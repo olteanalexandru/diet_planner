@@ -4,6 +4,8 @@ import { getSession } from '@auth0/nextjs-auth0';
 
 const prisma = new PrismaClient();
 
+const MAX_COMMENT_LENGTH = 500;
+
 export async function PUT(req: NextRequest, { params }: { params: { commentId: string } }) {
   const session = await getSession();
   if (!session || !session.user) {
@@ -27,6 +29,11 @@ export async function PUT(req: NextRequest, { params }: { params: { commentId: s
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
+    // Check comment length
+    if (content.length > MAX_COMMENT_LENGTH) {
+      return NextResponse.json({ error: 'Comment exceeds maximum length' }, { status: 400 });
+    }
+
     const updatedComment = await prisma.comment.update({
       where: { id: commentId },
       data: { 
@@ -44,7 +51,7 @@ export async function PUT(req: NextRequest, { params }: { params: { commentId: s
         ...updatedComment,
         likes: updatedComment.likes.length,
         isLiked: updatedComment.likes.some((like: { userId: string }) => like.userId === session.user.sub),
-        isEdited: updatedComment.createdAt.getTime() !== updatedComment?.updatedAt?.getTime(),
+        isEdited: updatedComment.createdAt.getTime() !== (updatedComment.updatedAt?.getTime() ?? updatedComment.createdAt.getTime()),
       }
     });
   } catch (error) {
@@ -75,12 +82,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { commentId
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Delete associated likes first
-    await prisma.commentLike.deleteMany({
-      where: { commentId: commentId }
-    });
-
-    // Then delete the comment
     await prisma.comment.delete({ where: { id: commentId } });
 
     return NextResponse.json({ message: 'Comment deleted successfully' });

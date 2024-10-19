@@ -20,7 +20,12 @@ export async function POST(req: NextRequest, { params }: { params: { commentId: 
       },
     });
 
-    return NextResponse.json({ like });
+    const updatedComment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { likes: true },
+    });
+
+    return NextResponse.json({ likes: updatedComment?.likes.length || 0 });
   } catch (error) {
     console.error('Error liking comment:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -45,7 +50,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { commentId
       },
     });
 
-    return NextResponse.json({ message: 'Comment unliked successfully' });
+    const updatedComment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { likes: true },
+    });
+
+    return NextResponse.json({ likes: updatedComment?.likes.length || 0 });
   } catch (error) {
     console.error('Error unliking comment:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

@@ -4,6 +4,9 @@ import { getSession } from '@auth0/nextjs-auth0';
 
 const prisma = new PrismaClient();
 
+const MAX_COMMENTS = 5;
+const MAX_COMMENT_LENGTH = 500;
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const recipeId = searchParams.get('recipeId');
@@ -34,6 +37,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const { recipeId, content } = await req.json();
+
+    // Check comment length
+    if (content.length > MAX_COMMENT_LENGTH) {
+      return NextResponse.json({ error: 'Comment exceeds maximum length' }, { status: 400 });
+    }
+
+    // Check comment count
+    const commentCount = await prisma.comment.count({ where: { recipeId } });
+    if (commentCount >= MAX_COMMENTS) {
+      return NextResponse.json({ error: 'Maximum number of comments reached' }, { status: 400 });
+    }
 
     const comment = await prisma.comment.create({
       data: {
