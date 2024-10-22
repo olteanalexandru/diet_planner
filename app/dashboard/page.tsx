@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { Recipe } from '../types';
-import { RecipeCard } from '../Components/RecipeCard';
+import { RecipeCard } from '../Components/recipes/RecipeCard';
 import Link from 'next/link';
 
 export default function Dashboard() {

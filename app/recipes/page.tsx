@@ -1,15 +1,17 @@
-"use client"
+"use client";
+
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Recipe } from '../types';
-import { RecipeCard } from '../Components/RecipeCard';
+import { RecipeCard } from '../Components/recipes/RecipeCard';
 import { RecipeSkeleton } from './RecipeSkeleton';
 import { useUser } from '@auth0/nextjs-auth0/client';
+import { Loader2 } from 'lucide-react';
 
 export default function Recipes() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState("something healthy for dinner");
+  const [fetchingMore, setFetchingMore] = useState(false);
   const searchParams = useSearchParams();
   const query = searchParams.get('query');
   const { user } = useUser();
@@ -37,47 +39,72 @@ export default function Recipes() {
   };
 
   const fetchOtherRecipes = async () => {
-    if (query) {
-      setLoading(true);
-      try {
-        const response = await fetch('/api/suggestOtherRecipes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, avoid: recipes }),
-        });
-        const data = await response.json();
-        setRecipes(data.recipes);
-      } catch (error) {
-        console.error('Error fetching recipes:', error);
-      }
-      setLoading(false);
+    if (!query) return;
+    
+    setFetchingMore(true);
+    try {
+      const response = await fetch('/api/suggestOtherRecipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, avoid: recipes }),
+      });
+      const data = await response.json();
+      setRecipes(data.recipes);
+    } catch (error) {
+      console.error('Error fetching recipes:', error);
+    } finally {
+      setFetchingMore(false);
     }
   };
 
   if (loading) return <RecipeSkeleton />;
 
   return (
-    <div className="container mt-5">
-      <h1 className="mb-4">AI Generated Recipes</h1>
-      <div className="row">
-        {recipes.map((recipe) => (
-          <RecipeCard key={recipe.id} recipe={recipe} />
-        ))}
-      </div>
-      <div className="d-flex justify-content-center">
-        <button 
-          onClick={() => query && fetchOtherRecipes()}
-          className="btn btn-primary w-50 mt-4"
-        >
-          I don't like these
-        </button>
-      </div>
-      {user && (
-        <div className="mt-4">
-          <h2>Your Custom Recipes</h2>
-          {/* Display user's custom recipes here */}
+    <div className="page-container">
+      <div className="flex flex-col gap-8">
+        {/* Header */}
+        <div className="space-y-2">
+          <h1 className="page-title">AI Generated Recipes</h1>
+          <p className="text-gray-400">
+            Searching for: <span className="text-cyber-primary">{query}</span>
+          </p>
         </div>
-      )}
+
+        {/* Recipe Grid */}
+        <div className="grid gap-6">
+          {recipes.map((recipe) => (
+            <RecipeCard key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-center">
+          <button 
+            onClick={fetchOtherRecipes}
+            disabled={fetchingMore}
+            className="btn-cyber relative"
+          >
+            {fetchingMore ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Loading more recipes...
+              </>
+            ) : (
+              "Show me different recipes"
+            )}
+          </button>
+        </div>
+
+        {/* User's Custom Recipes */}
+        {user && recipes.length > 0 && (
+          <div className="mt-16 space-y-6">
+            <h2 className="section-title">Your Custom Recipes</h2>
+            <div className="grid gap-6">
+              {/* Add custom recipes here */}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

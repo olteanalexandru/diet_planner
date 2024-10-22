@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { Comment } from './Comment';
-import { Recipe as RecipeType, Comment as CommentType } from '../types';
+import { Comment } from '../Comment';
+import { Recipe as RecipeType, Comment as CommentType } from '../../types';
 
 interface RecipeProps {
   recipe: RecipeType;

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { Recipe } from '../../types';
-import { RecipeCard } from '../../Components/RecipeCard';
+import { RecipeCard } from '../../Components/recipes/RecipeCard';
 import { FollowButton } from '../../Components/FollowButton';
 
 interface UserProfile {

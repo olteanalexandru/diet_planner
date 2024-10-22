@@ -18,32 +18,39 @@ export default function Favorites() {
   }
 
   return (
-    <div className="container mt-5">
-      <h2 className="mb-4 h2" style={{ fontWeight: 'bold' }}>Favorites</h2>
-      <div className="row">
+    <div className="w-full">
+      <h2 className="text-2xl font-bold mb-6 text-gray-100">
+        <span className="bg-gradient-to-r from-cyber-primary to-cyber-accent bg-clip-text text-transparent">
+          Your Favorites
+        </span>
+      </h2>
+      <div className="grid gap-4">
         {favorites.map((fav) => (
-          <div key={fav.id} className="d-flex align-items-center bg-light rounded mb-3" style={{ boxShadow: '0 6px 10px rgba(0, 0, 0, 0.1)', paddingLeft: 0 }}>
-            <div style={{ flexShrink: 0 }}>
+          <div 
+            key={fav.id} 
+            className="card-cyber flex items-center space-x-4 p-4 hover:scale-[1.01] transition-transform duration-200"
+          >
+            <div className="flex-shrink-0 w-20 h-20 overflow-hidden rounded-lg">
               <img
                 src={fav.imageUrl}
                 alt={fav.title}
-                className="me-3"
-                style={{ height: 'auto', borderRadius: '8px' , maxWidth: '80px', maxHeight: '100px' }}
+                className="w-full h-full object-cover"
               />
             </div>
-            <div className="flex-grow-1">
-              <h2 className="h5 mb-1">
-                <Link href={`/recipe/${fav.title}/${fav.cookingTime}`} className="text-decoration-none" style={{ color: 'black' }}>
-                  {fav.title}
-                </Link>
-              </h2>
-              <p className="mb-0">{fav.cookingTime} min.</p>
+            <div className="flex-grow">
+              <Link 
+                href={`/recipe/${fav.title}/${fav.cookingTime}`}
+                className="text-lg font-medium text-gray-100 hover:text-cyber-primary transition-colors duration-200"
+              >
+                {fav.title}
+              </Link>
+              <p className="text-gray-400">{fav.cookingTime} minutes</p>
             </div>
             <button
-              className="btn btn-link text-muted"
+              className="p-2 rounded-lg text-cyber-primary hover:bg-cyber-primary/10 transition-colors duration-200"
               onClick={() => removeFavorite(fav)}
             >
-              <Heart size={24} color="#65558F" fill="#65558F" />
+              <Heart size={24} fill="currentColor" />
             </button>
           </div>
         ))}
