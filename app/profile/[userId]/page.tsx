@@ -3,21 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { Recipe } from '../../types';
-import { RecipeCard } from '../../Components/recipes/RecipeCard';
-import { FollowButton } from '../../Components/FollowButton';
-
-interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-}
+import { Recipe, User } from '../../types';
+import { ProfileHeader, UserRecipes, UserProfileSkeleton } from '../../Components/profile';
 
 export default function UserProfile() {
   const { userId } = useParams();
   const { user: currentUser } = useUser();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,15 +21,17 @@ export default function UserProfile() {
     if (userId) {
       fetchUserProfile();
       fetchUserRecipes();
+      if (currentUser) {
+        checkFollowStatus();
+        fetchFollowCounts();
+      }
     }
-  }, [userId]);
+  }, [userId, currentUser]);
 
   const fetchUserProfile = async () => {
     try {
       const response = await fetch(`/api/users/${userId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch user profile');
-      }
+      if (!response.ok) throw new Error('Failed to fetch user profile');
       const data = await response.json();
       setProfile(data.user);
     } catch (error) {
@@ -45,9 +43,7 @@ export default function UserProfile() {
   const fetchUserRecipes = async () => {
     try {
       const response = await fetch(`/api/recipes?userId=${userId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch user recipes');
-      }
+      if (!response.ok) throw new Error('Failed to fetch user recipes');
       const data = await response.json();
       setRecipes(data.recipes);
     } catch (error) {
@@ -58,24 +54,63 @@ export default function UserProfile() {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div className="alert alert-danger">{error}</div>;
-  if (!profile) return <div>User not found</div>;
+  const checkFollowStatus = async () => {
+    try {
+      const response = await fetch(`/api/followUsers?followingId=${userId}`);
+      if (!response.ok) throw new Error('Failed to check follow status');
+      const data = await response.json();
+      setIsFollowing(data.isFollowing);
+    } catch (error) {
+      console.error('Error checking follow status:', error);
+    }
+  };
+
+  const fetchFollowCounts = async () => {
+    try {
+      const response = await fetch(`/api/followCounts/${userId}`);
+      if (!response.ok) throw new Error('Failed to fetch follow counts');
+      const data = await response.json();
+      setFollowersCount(data.followersCount);
+      setFollowingCount(data.followingCount);
+    } catch (error) {
+      console.error('Error fetching follow counts:', error);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const response = await fetch('/api/followUsers', {
+        method: isFollowing ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followingId: userId }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to update follow status');
+      
+      setIsFollowing(!isFollowing);
+      fetchFollowCounts();
+    } catch (error) {
+      console.error('Error updating follow status:', error);
+    }
+  };
+
+  if (isLoading) return <UserProfileSkeleton />;
+  if (error) return <div className="alert-error p-4 rounded-lg">{error}</div>;
+  if (!profile) return <div className="alert-error p-4 rounded-lg">User not found</div>;
 
   return (
-    <div className="container mt-5">
-      <h1>{profile.name}'s Profile</h1>
-      {currentUser && currentUser.sub !== profile.id && (
-        <FollowButton userId={profile.id} />
-      )}
-      <h2 className="mt-4">Recipes by {profile.name}</h2>
-      {recipes.length > 0 ? (
-        recipes.map((recipe) => (
-          <RecipeCard key={recipe.id} recipe={recipe} />
-        ))
-      ) : (
-        <p>{profile.name} hasn't created any recipes yet.</p>
-      )}
+    <div className="page-container space-y-8">
+      <ProfileHeader
+        profile={profile}
+        recipeCount={recipes.length}
+        followersCount={followersCount}
+        followingCount={followingCount}
+        isFollowing={isFollowing}
+        onFollowToggle={handleFollowToggle}
+      />
+      <UserRecipes recipes={recipes} />
     </div>
   );
 }

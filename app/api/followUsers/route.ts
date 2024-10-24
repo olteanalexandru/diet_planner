@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
@@ -6,22 +5,44 @@ import { getSession } from '@auth0/nextjs-auth0';
 const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session || !session.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { followingId } = await req.json();
 
-    const follow = await prisma.follow.create({
-      data: {
-        follower: { connect: { id: session.user.sub } },
-        following: { connect: { id: followingId } },
-      },
-    });
+    // First check if users exist
+    const [follower, following] = await Promise.all([
+      prisma.user.findUnique({ where: { id: session.user.sub } }),
+      prisma.user.findUnique({ where: { id: followingId } })
+    ]);
 
-    return NextResponse.json({ follow }, { status: 201 });
+    if (!follower || !following) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Create follow relationship and activity
+    const [follow, activity] = await prisma.$transaction([
+      // Create follow
+      prisma.follow.create({
+        data: {
+          followerId: session.user.sub,
+          followingId: followingId,
+        },
+      }),
+      // Create activity with only required fields
+      prisma.activity.createMany({
+        data: {
+          action: 'followed',
+          userId: session.user.sub,
+          targetUserId: followingId,
+        },
+      }),
+    ]);
+
+    return NextResponse.json({ follow, activity }, { status: 201 });
   } catch (error) {
     console.error('Error following user:', error);
     return NextResponse.json({ error: 'Error following user' }, { status: 500 });
@@ -29,24 +50,38 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = await getSession();
-  if (!session || !session.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { followingId } = await req.json();
 
-    await prisma.follow.delete({
-      where: {
-        followerId_followingId: {
-          followerId: session.user.sub,
-          followingId: followingId,
+    const [deletedFollow, activity] = await prisma.$transaction([
+      // Delete follow
+      prisma.follow.delete({
+        where: {
+          followerId_followingId: {
+            followerId: session.user.sub,
+            followingId: followingId,
+          },
         },
-      },
-    });
+      }),
+      // Create unfollow activity with only required fields
+      prisma.activity.createMany({
+        data: {
+          action: 'unfollowed',
+          userId: session.user.sub,
+          targetUserId: followingId,
+        },
+      }),
+    ]);
 
-    return NextResponse.json({ message: 'Unfollowed successfully' });
+    return NextResponse.json({ 
+      message: 'Unfollowed successfully',
+      activity 
+    });
   } catch (error) {
     console.error('Error unfollowing user:', error);
     return NextResponse.json({ error: 'Error unfollowing user' }, { status: 500 });
@@ -54,19 +89,19 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session || !session.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(req.url);
-  const followingId = searchParams.get('followingId');
-
-  if (!followingId) {
-    return NextResponse.json({ error: 'Missing followingId parameter' }, { status: 400 });
-  }
-
   try {
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const followingId = searchParams.get('followingId');
+
+    if (!followingId) {
+      return NextResponse.json({ error: 'Missing followingId parameter' }, { status: 400 });
+    }
+
     const follow = await prisma.follow.findUnique({
       where: {
         followerId_followingId: {
@@ -76,7 +111,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ isFollowing: !!follow });
+    return NextResponse.json({ isFollowing: Boolean(follow) });
   } catch (error) {
     console.error('Error checking follow status:', error);
     return NextResponse.json({ error: 'Error checking follow status' }, { status: 500 });

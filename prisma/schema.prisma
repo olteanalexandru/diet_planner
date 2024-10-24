@@ -3,105 +3,130 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
   id                 String        @id
-  email              String        @unique
+  email              String?       @unique
   name               String?
+  subscriptionStatus String        @default("free")
   recipes            Recipe[]
   favorites          Favorite[]
-  following          Follow[]      @relation("UserFollowing")
-  followers          Follow[]      @relation("UserFollowers")
-  mealPlans          MealPlan[]
-  subscriptionStatus String        @default("free")
+  followers          Follow[]      @relation("Following")
+  following          Follow[]      @relation("Follower")
   comments           Comment[]
+  commentLikes       CommentLike[]
   activities         Activity[]
-  CommentLike        CommentLike[]
+  mealPlans          MealPlan[]
+  createdAt          DateTime      @default(now())
 }
 
 model Recipe {
-  id            String     @id @default(cuid())
+  id            String     @id
   title         String
   ingredients   String[]
   instructions  String[]
   cookingTime   Int
   imageUrl      String?
-  imageUrlLarge String? // New field added
-  author        User       @relation(fields: [authorId], references: [id])
+  imageUrlLarge String?
   authorId      String
+  author        User       @relation(fields: [authorId], references: [id])
   favorites     Favorite[]
+  comments      Comment[]
+  activities    Activity[]
   mealPlans     MealPlan[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
-  comments      Comment[]
-  activities    Activity[]
+
+  @@index([authorId])
 }
 
 model Favorite {
-  id       String @id @default(cuid())
-  user     User   @relation(fields: [userId], references: [id])
-  userId   String
-  recipe   Recipe @relation(fields: [recipeId], references: [id])
-  recipeId String
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  user      User     @relation(fields: [userId], references: [id])
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  createdAt DateTime @default(now())
+
   @@unique([userId, recipeId])
+  @@index([userId])
+  @@index([recipeId])
 }
 
 model Follow {
-  id          String @id @default(cuid())
-  follower    User   @relation("UserFollowing", fields: [followerId], references: [id])
+  id          String   @id @default(cuid())
+  follower    User     @relation("Follower", fields: [followerId], references: [id])
   followerId  String
-  following   User   @relation("UserFollowers", fields: [followingId], references: [id])
+  following   User     @relation("Following", fields: [followingId], references: [id])
   followingId String
-  @@unique([followerId, followingId])
-}
+  createdAt   DateTime @default(now())
 
-model MealPlan {
-  id       String   @id @default(cuid())
-  user     User     @relation(fields: [userId], references: [id])
-  userId   String
-  date     DateTime
-  recipe   Recipe   @relation(fields: [recipeId], references: [id])
-  recipeId String
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
 
 model Comment {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id])
   userId    String
-  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipe    Recipe        @relation(fields: [recipeId], references: [id])
   recipeId  String
   likes     CommentLike[]
-}
 
+  @@index([userId])
+  @@index([recipeId])
+}
 
 model CommentLike {
   id        String   @id @default(cuid())
   user      User     @relation(fields: [userId], references: [id])
   userId    String
-  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  comment   Comment  @relation(fields: [commentId], references: [id])
   commentId String
   createdAt DateTime @default(now())
 
   @@unique([userId, commentId])
+  @@index([userId])
+  @@index([commentId])
 }
 
 model Activity {
+  id           String    @id @default(cuid())
+  action       String
+  userId       String
+  targetUserId String?
+  recipeId     String?   // Make recipe optional
+  user         User      @relation(fields: [userId], references: [id])
+  recipe       Recipe?   @relation(fields: [recipeId], references: [id]) // Make recipe optional
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([recipeId])
+  @@index([targetUserId])
+}
+
+
+model MealPlan {
   id        String   @id @default(cuid())
-  action    String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
   userId    String
-  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  date      DateTime
   recipeId  String
+  user      User     @relation(fields: [userId], references: [id])
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([recipeId])
 }

@@ -66,10 +66,10 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
                   )}
                 </div>
 
-                {/* Preview Content */}
+                {/* Preview Content  -- MIGHT WANT TO ALSO ADD INGREDIENTS IN THE FUTURE*/}
                 <div className="text-gray-400 text-sm line-clamp-2">
-                  {recipe.ingredients.slice(0, 3).join(', ')}
-                  {recipe.ingredients.length > 3 && '...'}
+                  {recipe.ingredients?.slice(0, 3).join(', ')}
+                  {recipe.ingredients?.length > 3 && '...'}
                 </div>
               </div>
 

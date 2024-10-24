@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Recipe } from '../types';
 import { RecipeCard } from '../Components/recipes/RecipeCard';
-import { RecipeSkeleton } from './RecipeSkeleton';
-import { useUser } from '@auth0/nextjs-auth0/client';
+import { RecipeGridSkeleton } from '../Components/recipes/RecipeSkeleton';
+// import { useUser } from '@auth0/nextjs-auth0/client';
 import { Loader2 } from 'lucide-react';
 
 export default function Recipes() {
@@ -14,7 +14,7 @@ export default function Recipes() {
   const [fetchingMore, setFetchingMore] = useState(false);
   const searchParams = useSearchParams();
   const query = searchParams.get('query');
-  const { user } = useUser();
+  // const { user } = useUser();
 
   useEffect(() => {
     if (query) {
@@ -57,7 +57,21 @@ export default function Recipes() {
     }
   };
 
-  if (loading) return <RecipeSkeleton />;
+  if (loading) {
+    return (
+      <div className="page-container">
+        <div className="flex flex-col gap-8">
+          <div className="space-y-2">
+            <h1 className="page-title">AI Generated Recipes</h1>
+            <p className="text-gray-400">
+              Searching for: <span className="text-cyber-primary">{query}</span>
+            </p>
+          </div>
+          <RecipeGridSkeleton />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">
@@ -94,16 +108,6 @@ export default function Recipes() {
             )}
           </button>
         </div>
-
-        {/* User's Custom Recipes */}
-        {user && recipes.length > 0 && (
-          <div className="mt-16 space-y-6">
-            <h2 className="section-title">Your Custom Recipes</h2>
-            <div className="grid gap-6">
-              {/* Add custom recipes here */}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

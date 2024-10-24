@@ -12,9 +12,8 @@ const openai = new OpenAI({
 });
 
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
-
 const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const RETRY_DELAY = 1000;
 
 function isValidJSON(str: string) {
   try {
@@ -34,9 +33,7 @@ function normalizeTitle(title: string) {
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session || !session.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const userId = session?.user?.sub;
 
   let requestBody;
   try {
@@ -57,23 +54,7 @@ export async function POST(req: NextRequest) {
   let attempts = 0;
   while (attempts < MAX_RETRIES) {
     try {
-      // Ensure the user exists in the database
-      let user = await prisma.user.findUnique({
-        where: { id: session.user.sub },
-      });
-
-      if (!user) {
-        // Create the user if they don't exist
-        user = await prisma.user.create({
-          data: {
-            id: session.user.sub,
-            email: session.user.email || '',
-            name: session.user.name || '',
-          },
-        });
-      }
-
-      // Check if the recipe already exists in the database
+      // First, check if the recipe exists in the database
       let recipe = await prisma.recipe.findFirst({
         where: {
           title: { equals: normalisedTitle, mode: 'insensitive' },
@@ -93,11 +74,25 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      if (!recipe) {
-        console.log('Recipe not found in the database, fetching details from OpenAI for title:', normalisedTitle, 'and cooking time:', cookingTime);
+      // If recipe exists, return it with appropriate user-specific data
+      if (recipe) {
+        const commentsWithLikes = recipe.comments.map((comment: any) => ({
+          ...comment,
+          likes: comment.likes.length,
+          isLiked: userId ? comment.likes.some((like: { userId: string }) => like.userId === userId) : false,
+        }));
 
+        return NextResponse.json({
+          recipe: {
+            ...recipe,
+            comments: commentsWithLikes,
+            isOwner: userId === recipe.author.id,
+          },
+        });
+      }
 
-
+      // If recipe doesn't exist and there's no user session, return AI-generated recipe without saving
+      if (!userId) {
         const completion = await openai.chat.completions.create({
           model: "gpt-3.5-turbo",
           messages: [
@@ -106,10 +101,7 @@ export async function POST(req: NextRequest) {
           ],
         });
 
-        console.log('Completion response for recipe details:', completion.choices[0].message?.content);
-
         let recipeDetails: Recipe;
-
         try {
           const responseContent = completion.choices[0].message?.content || '{}';
           if (!isValidJSON(responseContent)) {
@@ -121,10 +113,7 @@ export async function POST(req: NextRequest) {
           throw new Error('Invalid JSON format from OpenAI');
         }
 
-        if (!recipeDetails.title || !recipeDetails.cookingTime || !recipeDetails.ingredients.length || !recipeDetails.instructions.length) {
-          throw new Error('Incomplete recipe details: ' + JSON.stringify(recipeDetails));
-        }
-
+        // Get image if needed
         let recipeImageUrl = imageUrl;
         let recipeImageUrlLarge = '';
 
@@ -144,69 +133,133 @@ export async function POST(req: NextRequest) {
             recipeImageUrlLarge = response.data.photos[0]?.src?.large || '';
           } catch (error) {
             console.error(`Error fetching image for ${recipeDetails.title}:`, error);
-            recipeImageUrl = '';
           }
         }
 
-        // Create a stable ID for the recipe
-        const stableId = `${normalisedTitle.toLowerCase().replace(/\s+/g, '-')}-${uuidv4().slice(0, 8)}`;
-
-        // Save the recipe to the database
-        recipe = await prisma.recipe.create({
-          data: {
-            id: stableId,
-            title: recipeDetails.title,
-            ingredients: recipeDetails.ingredients,
-            instructions: recipeDetails.instructions,
-            cookingTime: parseInt(cookingTime),
+        // Return generated recipe without saving to database
+        return NextResponse.json({
+          recipe: {
+            ...recipeDetails,
+            id: `temp-${uuidv4()}`,
             imageUrl: recipeImageUrl,
             imageUrlLarge: recipeImageUrlLarge,
-            author: { connect: { id: user.id } },
-            comments: {
-              create: [], // Initialize with an empty array 
-            },
-          },
-          include: {
-            author: true,
-            comments: {
-              include: {
-                user: true,
-                likes: true,
-              },
-            },
-          },
-        });
-
-        // Create an activity for the new recipe
-        await prisma.activity.create({
-          data: {
-            action: 'generated',
-            user: { connect: { id: user.id } },
-            recipe: { connect: { id: recipe.id } },
+            comments: [],
+            isOwner: false,
           },
         });
       }
 
-     // Process comments and likes
-     const commentsWithLikes = recipe.comments.map((comment: any) => ({
-      ...comment,
-      likes: comment.likes.length,
-      isLiked: comment.likes.some((like: { userId: string }) => like.userId === session.user!.sub),
-    }));
+      // If user is authenticated and recipe doesn't exist, create and save it
+      let user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
 
-    return NextResponse.json({
-      recipe: {
-        ...recipe,
-        comments: commentsWithLikes,
-      },
-    });
-  } catch (error) {
-    attempts++;
-    console.error(`Attempt ${attempts} failed:`, error);
-    if (attempts >= MAX_RETRIES) {
-      return NextResponse.json({ error: 'Error fetching recipe details after multiple attempts' }, { status: 500 });
+      console.log("user session data", user , userId , session?.user?.email, session?.user?.name);
+
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            id: userId,
+            email: session?.user?.email || session?.user?.name,
+            name: session?.user?.name || '',
+          },
+        });
+      }
+
+
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: "You are a helpful assistant that provides recipe details." },
+          { role: "user", content: `Provide detailed information for the recipe with title "${normalisedTitle}" and cooking time "${cookingTime}". Include the title, ingredients, and instructions. Return the response as a valid JSON object with the keys: id, title, ingredients, instructions, and cookingTime.` }
+        ],
+      });
+
+      let recipeDetails: Recipe;
+      try {
+        const responseContent = completion.choices[0].message?.content || '{}';
+        if (!isValidJSON(responseContent)) {
+          throw new Error('Invalid JSON format from OpenAI');
+        }
+        recipeDetails = JSON.parse(responseContent);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        throw new Error('Invalid JSON format from OpenAI');
+      }
+
+      let recipeImageUrl = imageUrl;
+      let recipeImageUrlLarge = '';
+
+      if (!imageUrl) {
+        try {
+          const response = await axios.get(`https://api.pexels.com/v1/search`, {
+            params: {
+              query: recipeDetails.title,
+              per_page: 1,
+            },
+            headers: {
+              Authorization: PEXELS_API_KEY,
+            },
+          });
+
+          recipeImageUrl = response.data.photos[0]?.src?.small || '';
+          recipeImageUrlLarge = response.data.photos[0]?.src?.large || '';
+        } catch (error) {
+          console.error(`Error fetching image for ${recipeDetails.title}:`, error);
+        }
+      }
+
+      const stableId = `${normalisedTitle.toLowerCase().replace(/\s+/g, '-')}-${uuidv4().slice(0, 8)}`;
+      
+      recipe = await prisma.recipe.create({
+        data: {
+          id: stableId,
+          title: recipeDetails.title,
+          ingredients: recipeDetails.ingredients,
+          instructions: recipeDetails.instructions,
+          cookingTime: parseInt(cookingTime),
+          imageUrl: recipeImageUrl,
+          imageUrlLarge: recipeImageUrlLarge,
+          author: { connect: { id: user.id } },
+        },
+        include: {
+          author: true,
+          comments: {
+            include: {
+              user: true,
+              likes: true,
+            },
+          },
+        },
+      });
+
+      // Create activity only for authenticated users
+      await prisma.activity.create({
+        data: {
+          action: 'generated',
+          user: { connect: { id: user.id } },
+          recipe: { connect: { id: recipe.id } },
+        },
+      });
+
+      return NextResponse.json({
+        recipe: {
+          ...recipe,
+          comments: [],
+          isOwner: true,
+        },
+      });
+
+    } catch (error) {
+      attempts++;
+      console.error(`Attempt ${attempts} failed:`, error);
+      if (attempts >= MAX_RETRIES) {
+        return NextResponse.json({ error: 'Error fetching recipe details after multiple attempts' }, { status: 500 });
+      }
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
     }
-    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
   }
-}
+
+  return NextResponse.json({ error: 'Maximum retries exceeded' }, { status: 500 });
 }
