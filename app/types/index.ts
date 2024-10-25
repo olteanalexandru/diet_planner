@@ -2,6 +2,14 @@
 import { User as PrismaUser, Recipe as PrismaRecipe } from '@prisma/client';
 import { ReactNode } from 'react';
 
+import { UserProfile} from '@auth0/nextjs-auth0/client';
+
+interface Auth0User extends UserProfile {
+  sub: string;
+  email?: string;
+  name?: string;
+}
+
 // Core Types
 export interface User extends PrismaUser {
   _count?: {
@@ -13,15 +21,17 @@ export interface User extends PrismaUser {
   bio?: string;
 }
 
-export interface Recipe extends PrismaRecipe {
-  author?: User;
-  comments?: Comment[];
-  isOwner?: boolean;
-  _count?: {
-    likes: number;
-    comments: number;
-  };
-}
+// export interface Recipe extends PrismaRecipe {
+//   author?: User;
+//   comments?: Comment[];
+//   isOwner?: boolean;
+//   _count?: {
+//     likes: number;
+//     comments: number;
+//   };
+//   imageUrl?: string | null;
+//   imageUrlLarge?: string | null;
+// }
 
 // Context Types
 export interface RecipeContextType {
@@ -145,7 +155,7 @@ export interface RecipeFormData {
   ingredients: string[];
   instructions: string[];
   cookingTime: number;
-  imageUrl?: string;
+  imageUrl?: string | null;
 }
 
 export interface CommentFormData {
@@ -247,3 +257,58 @@ export interface Pagination {
   hasMore: boolean;
 }
 
+export interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+  user: {
+    id: string;
+    name: string;
+  };
+  likes: number;
+  isLiked: boolean;
+}
+
+export interface FavouriteRecipeComponentProps {
+  recipe: Recipe;
+  favorites: Recipe[];
+  setFavorites: (favorites: Recipe[]) => void;
+}
+
+
+export interface Recipe {
+
+  id: string;
+  title: string;
+  ingredients: string[];
+  instructions: string[];
+  cookingTime: number;
+  imageUrl?: string | null;
+  imageUrlLarge?: string | null;
+  authorId: string;
+  author?: User;
+  comments?: Comment[];
+  createdAt: string;
+  updatedAt: string;
+  category?: string;
+  tags?: string[];
+  dietaryInfo?: {
+    isVegetarian?: boolean;
+    isVegan?: boolean;
+  };
+  _count?: {
+    likes: number;
+    comments: number;
+  };
+  
+  favorites?: any[]; // For checking if recipe is favorited
+  isOwner?: boolean;
+  viewCount?: number;
+}
+export interface RecipeCardProps {
+  recipe: Recipe;
+  onDelete?: (recipeId: string) => void;
+  onEdit?: (recipeId: string, updatedRecipe: Recipe) => void;
+}

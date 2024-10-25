@@ -3,114 +3,133 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { Recipe, User } from '../../types';
-import { ProfileHeader, UserRecipes, UserProfileSkeleton } from '../../Components/profile';
+import { ProfileHeader } from '@/app/Components/profile/ProfileHeader';
+import { ProfileTabs } from '@/app/Components/profile/ProfileTabs';
+import { ProfileSkeleton } from '@/app/Components/profile/ProfileSkeleton';
+import { Recipe, User } from '@/app/types';
 
-export default function UserProfile() {
+type TabType = 'recipes' | 'favorites' | 'activity';
+
+export default function ProfilePage() {
   const { userId } = useParams();
   const { user: currentUser } = useUser();
   const [profile, setProfile] = useState<User | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followersCount, setFollowersCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    recipesCount: 0,
+    followersCount: 0,
+    followingCount: 0,
+  });
+  const [activeTab, setActiveTab] = useState<TabType>('recipes');
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (userId) {
-      fetchUserProfile();
-      fetchUserRecipes();
-      if (currentUser) {
-        checkFollowStatus();
-        fetchFollowCounts();
+    const fetchProfileData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch profile data
+        const profileResponse = await fetch(`/api/users/${userId}`);
+        if (!profileResponse.ok) throw new Error('Failed to fetch profile');
+        const profileData = await profileResponse.json();
+        setProfile(profileData.user);
+
+        // Fetch recipes
+        const recipesResponse = await fetch(`/api/recipes?userId=${userId}`);
+        if (!recipesResponse.ok) throw new Error('Failed to fetch recipes');
+        const recipesData = await recipesResponse.json();
+        setRecipes(recipesData.recipes);
+
+        // Fetch follow status if logged in
+        if (currentUser?.sub && userId !== currentUser.sub) {
+          const followResponse = await fetch(`/api/followUsers?followingId=${userId}`);
+          if (followResponse.ok) {
+            const followData = await followResponse.json();
+            setIsFollowing(followData.isFollowing);
+          }
+        }
+
+        // Fetch stats
+        const statsResponse = await fetch(`/api/users/${userId}/stats`);
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setStats(statsData);
+        }
+      } catch (error) {
+        console.error('Error fetching profile data:', error);
+        setError('Failed to load profile');
+      } finally {
+        setLoading(false);
       }
+    };
+
+    if (userId) {
+      fetchProfileData();
     }
   }, [userId, currentUser]);
 
-  const fetchUserProfile = async () => {
-    try {
-      const response = await fetch(`/api/users/${userId}`);
-      if (!response.ok) throw new Error('Failed to fetch user profile');
-      const data = await response.json();
-      setProfile(data.user);
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      setError('Failed to load user profile');
-    }
-  };
-
-  const fetchUserRecipes = async () => {
-    try {
-      const response = await fetch(`/api/recipes?userId=${userId}`);
-      if (!response.ok) throw new Error('Failed to fetch user recipes');
-      const data = await response.json();
-      setRecipes(data.recipes);
-    } catch (error) {
-      console.error('Error fetching user recipes:', error);
-      setError('Failed to load user recipes');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const checkFollowStatus = async () => {
-    try {
-      const response = await fetch(`/api/followUsers?followingId=${userId}`);
-      if (!response.ok) throw new Error('Failed to check follow status');
-      const data = await response.json();
-      setIsFollowing(data.isFollowing);
-    } catch (error) {
-      console.error('Error checking follow status:', error);
-    }
-  };
-
-  const fetchFollowCounts = async () => {
-    try {
-      const response = await fetch(`/api/followCounts/${userId}`);
-      if (!response.ok) throw new Error('Failed to fetch follow counts');
-      const data = await response.json();
-      setFollowersCount(data.followersCount);
-      setFollowingCount(data.followingCount);
-    } catch (error) {
-      console.error('Error fetching follow counts:', error);
-    }
-  };
-
   const handleFollowToggle = async () => {
-    if (!currentUser) return;
-    
     try {
+      const method = isFollowing ? 'DELETE' : 'POST';
       const response = await fetch('/api/followUsers', {
-        method: isFollowing ? 'DELETE' : 'POST',
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ followingId: userId }),
       });
-      
+
       if (!response.ok) throw new Error('Failed to update follow status');
-      
+
       setIsFollowing(!isFollowing);
-      fetchFollowCounts();
+      setStats(prev => ({
+        ...prev,
+        followersCount: prev.followersCount + (isFollowing ? -1 : 1),
+      }));
     } catch (error) {
       console.error('Error updating follow status:', error);
     }
   };
 
-  if (isLoading) return <UserProfileSkeleton />;
-  if (error) return <div className="alert-error p-4 rounded-lg">{error}</div>;
-  if (!profile) return <div className="alert-error p-4 rounded-lg">User not found</div>;
+  if (loading) return <ProfileSkeleton />;
+  
+  if (error) {
+    return (
+      <div className="flex-center min-h-[60vh] flex-col gap-4">
+        <p className="text-red-400">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="btn-cyber-outline"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex-center min-h-[60vh]">
+        <p className="text-gray-400">Profile not found</p>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container space-y-8">
       <ProfileHeader
         profile={profile}
-        recipeCount={recipes.length}
-        followersCount={followersCount}
-        followingCount={followingCount}
+        stats={stats}
         isFollowing={isFollowing}
         onFollowToggle={handleFollowToggle}
       />
-      <UserRecipes recipes={recipes} />
+
+      <ProfileTabs
+        recipes={recipes}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
     </div>
   );
 }

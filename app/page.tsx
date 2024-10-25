@@ -10,17 +10,6 @@ export default function Home() {
   const router = useRouter();
    
   const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
-    //make a post request to /api/clear-database
-
-    //post request to /api/ClearDatabase
-    const response = await fetch('/api/ClearDatabase', {
-      method: 'POST',
-    });
-    const data = await response.json();
-
-    console.log(data);
-
-
     e.preventDefault();
      router.push(`/recipes/?query=${encodeURIComponent(query)}`);
 

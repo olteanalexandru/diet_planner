@@ -10,6 +10,8 @@ export type ActivityType =
   | 'recipe_milestone'
   | 'weekly_digest';
 
+
+
 export interface SocialActivity {
   id: string;
   type: ActivityType;
@@ -75,8 +77,10 @@ export interface SocialContextType {
 }
 
 // Component Props Types
-export interface ActivityCardProps {
+interface ActivityCardProps {
   activity: SocialActivity;
+  onLike?: (activityId: string) => Promise<void>;
+  onComment?: (activityId: string, content: string) => Promise<void>;
 }
 
 export interface ActivityCommentsProps {

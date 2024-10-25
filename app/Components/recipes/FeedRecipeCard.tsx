@@ -101,7 +101,7 @@ export const RecipeCard: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
               size={20}
               className={isLiked ? 'fill-cyber-primary text-cyber-primary' : ''}
             />
-            <span>{recipe._count?.favorites || 0}</span>
+            <span>{recipe._count?.likes || 0}</span>
           </button>
 
           <Link

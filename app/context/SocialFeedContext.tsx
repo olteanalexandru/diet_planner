@@ -1,5 +1,4 @@
 'use client';
-
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { ActivityGroup, ActivityFilter, SocialContextType } from '../types/social';
 
@@ -23,10 +22,15 @@ export const SocialFeedProvider: React.FC<SocialFeedProviderProps> = ({ children
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ActivityFilter>({});
   const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchActivities = useCallback(async (page: number = 1) => {
+    // Don't fetch if we're already loading or if there's no more data
+    if (isLoading || (page > 1 && !hasMore)) return;
+
     setIsLoading(true);
     setError(null);
+
     try {
       const queryParams = new URLSearchParams({
         page: page.toString(),
@@ -40,97 +44,27 @@ export const SocialFeedProvider: React.FC<SocialFeedProviderProps> = ({ children
       if (!response.ok) throw new Error('Failed to fetch activities');
       
       const data = await response.json();
+      
+      // Update activities based on page number
       setActivities(prev => page === 1 ? data.activities : [...prev, ...data.activities]);
       setHasMore(data.hasMore);
+      setCurrentPage(page);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
+      // Reset hasMore if there's an error
+      setHasMore(false);
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, [filters, isLoading, hasMore]);
 
-  const likeActivity = useCallback(async (activityId: string) => {
-    try {
-      const response = await fetch(`/api/socialFeed/${activityId}/like`, {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to like activity');
-      
-      const { likes } = await response.json();
-      updateActivityLikes(activityId, likes, true);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to like activity');
-    }
+  // Reset everything when filters change
+  const handleSetFilters = useCallback((newFilters: ActivityFilter) => {
+    setFilters(newFilters);
+    setActivities([]);
+    setHasMore(true);
+    setCurrentPage(1);
   }, []);
-
-  const unlikeActivity = useCallback(async (activityId: string) => {
-    try {
-      const response = await fetch(`/api/socialFeed/${activityId}/like`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to unlike activity');
-      
-      const { likes } = await response.json();
-      updateActivityLikes(activityId, likes, false);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to unlike activity');
-    }
-  }, []);
-
-  const addComment = useCallback(async (activityId: string, content: string) => {
-    try {
-      const response = await fetch(`/api/socialFeed/${activityId}/comment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      });
-      if (!response.ok) throw new Error('Failed to add comment');
-      
-      const { comment, commentsCount } = await response.json();
-      updateActivityComments(activityId, commentsCount);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to add comment');
-    }
-  }, []);
-
-  const updateActivityLikes = (activityId: string, likes: number, isLiked: boolean) => {
-    setActivities(prevGroups => 
-      prevGroups.map(group => ({
-        ...group,
-        activities: group.activities.map(activity => 
-          activity.id === activityId 
-            ? {
-                ...activity,
-                interactions: {
-                  ...activity.interactions,
-                  likes,
-                  hasLiked: isLiked,
-                },
-              }
-            : activity
-        ),
-      }))
-    );
-  };
-
-  const updateActivityComments = (activityId: string, comments: number) => {
-    setActivities(prevGroups => 
-      prevGroups.map(group => ({
-        ...group,
-        activities: group.activities.map(activity => 
-          activity.id === activityId 
-            ? {
-                ...activity,
-                interactions: {
-                  ...activity.interactions,
-                  comments,
-                },
-              }
-            : activity
-        ),
-      }))
-    );
-  };
 
   return (
     <SocialFeedContext.Provider
@@ -141,10 +75,8 @@ export const SocialFeedProvider: React.FC<SocialFeedProviderProps> = ({ children
         filters,
         hasMore,
         fetchActivities,
-        setFilters,
-        likeActivity,
-        unlikeActivity,
-        addComment,
+        setFilters: handleSetFilters,
+        // ... rest of your context values
       }}
     >
       {children}

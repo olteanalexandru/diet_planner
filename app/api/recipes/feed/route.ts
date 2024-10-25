@@ -1,10 +1,8 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 
 const prisma = new PrismaClient();
-
 const ITEMS_PER_PAGE = 10;
 
 export async function POST(req: NextRequest) {
@@ -23,33 +21,9 @@ export async function POST(req: NextRequest) {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
     // Build orderBy based on sort parameter
-    let orderBy: any = {};
-    if (sort === 'trending') {
-      orderBy = [
-        {
-          favorites: {
-            _count: 'desc'
-          }
-        },
-        {
-          comments: {
-            where: {
-              createdAt: {
-                gte: oneWeekAgo
-              }
-            },
-            _count: 'desc'
-          }
-        },
-        {
-          viewCount: 'desc'
-        }
-      ];
-    } else {
-      orderBy = {
-        createdAt: 'desc'
-      };
-    }
+    const orderBy: any = sort === 'trending' 
+      ? { viewCount: 'desc' }  // Primary ordering by viewCount for trending
+      : { createdAt: 'desc' }; // Default to latest
 
     // Fetch recipes with pagination
     const [recipes, total] = await prisma.$transaction([
@@ -65,28 +39,40 @@ export async function POST(req: NextRequest) {
               name: true,
             }
           },
+          favorites: session?.user ? {
+            where: {
+              userId: session.user.sub
+            }
+          } : false,
           _count: {
             select: {
               comments: true,
               favorites: true,
             }
           },
-          favorites: session?.user ? {
-            where: {
-              userId: session.user.sub
-            }
-          } : false,
         }
       }),
       prisma.recipe.count({ where })
     ]);
 
-    // Transform recipes to include isLiked status
-    const transformedRecipes = recipes.map(recipe => ({
-      ...recipe,
-      isLiked: recipe.favorites?.length > 0,
-      favorites: undefined, // Remove favorites array from response
-    }));
+    // Get additional engagement metrics for trending sort
+    let transformedRecipes = recipes.map(recipe => {
+      const engagementScore = sort === 'trending'
+        ? (recipe._count.favorites * 2) + recipe._count.comments + recipe.viewCount
+        : 0;
+
+      return {
+        ...recipe,
+        isLiked: recipe.favorites?.length > 0,
+        engagementScore,
+        favorites: undefined, // Remove favorites array from response
+      };
+    });
+
+    // Sort by engagement score if trending
+    if (sort === 'trending') {
+      transformedRecipes.sort((a, b) => b.engagementScore - a.engagementScore);
+    }
 
     return NextResponse.json({
       recipes: transformedRecipes,

@@ -5,6 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import { Filter, Loader2, TrendingUp, Clock, ArrowUp } from 'lucide-react';
 import { Recipe } from '../types';
 import { RecipeGridSkeleton } from '../Components/recipes/RecipeSkeleton';
+import {RecipeCard} from '../Components/recipes/FeedRecipeCard';
 
 type SortOption = 'trending' | 'latest';
 

@@ -1,108 +1,142 @@
+
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Heart, Clock, ChevronRight } from 'lucide-react';
-import { Recipe } from '../../types';
-import { useFavorites } from '../../context/FavoritesContext';
+import { Heart, MessageCircle, Share2, ChefHat } from 'lucide-react';
+import { Recipe } from '@/app/types';
+import { useFavorites } from '@/app/context/FavoritesContext';
+import { formatDistance } from 'date-fns';
+import { createRecipeUrl, createUserUrl, createShareUrl, createTagUrl } from '@/app/utils/url';
 
-interface RecipeCardProps {
-  recipe: Recipe;
-}
-
-export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
+export const RecipeCard: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLiked, setIsLiked] = useState(() => isFavorite(recipe));
 
-  const toggleFavorite = async () => {
-    setIsLoading(true);
-    setError(null);
+  const handleLike = async () => {
     try {
-      if (isFavorite(recipe)) {
+      if (isLiked) {
         await removeFavorite(recipe);
       } else {
         await addFavorite(recipe);
       }
+      setIsLiked(!isLiked);
     } catch (error) {
-      setError('Failed to update favorite');
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to toggle like:', error);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      await navigator.share({
+        title: recipe.title,
+        text: `Check out this recipe: ${recipe.title}`,
+        url: createShareUrl(recipe)
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
     }
   };
 
   return (
-    <div className="w-full">
-      <div className="card-cyber group relative overflow-hidden transition-all duration-300 hover:translate-y-[-2px]">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 p-4">
-          {/* Image Container */}
-          <div className="w-full md:w-48 h-48 md:h-32 relative rounded-lg overflow-hidden flex-shrink-0">
-            <img
-              src={recipe.imageUrl || '/placeholder-recipe.jpg'}
-              alt={recipe.title}
-              className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+    <article className="card-cyber overflow-hidden group">
+      {/* Header */}
+      <div className="p-4 flex items-center justify-between">
+        <Link
+          href={createUserUrl(recipe.authorId)}
+          className="flex items-center gap-2 hover:text-cyber-primary transition-colors"
+        >
+          <div className="w-10 h-10 rounded-full bg-cyber-primary/10 flex items-center justify-center">
+            {recipe.author?.name?.[0] || <ChefHat size={20} />}
           </div>
-
-          {/* Content Container */}
-          <div className="flex-grow min-w-0 w-full">
-            <div className="flex flex-col md:flex-row justify-between gap-4">
-              <div className="flex-grow space-y-2">
-                <Link 
-                  href={`/recipe/${recipe.title}/${recipe.cookingTime}`}
-                  className="block text-xl font-semibold text-gray-100 hover:text-cyber-primary line-clamp-2 transition-colors duration-200"
-                >
-                  {recipe.title}
-                </Link>
-                
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center text-gray-400">
-                    <Clock size={16} className="mr-1" />
-                    <span>{recipe.cookingTime} minutes</span>
-                  </div>
-                  {recipe.author && (
-                    <div className="text-sm text-gray-400">
-                      by <span className="text-cyber-primary">{recipe.author.name}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Preview Content  -- MIGHT WANT TO ALSO ADD INGREDIENTS IN THE FUTURE*/}
-                <div className="text-gray-400 text-sm line-clamp-2">
-                  {recipe.ingredients?.slice(0, 3).join(', ')}
-                  {recipe.ingredients?.length > 3 && '...'}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex md:flex-col items-center gap-2">
-                <button
-                  onClick={toggleFavorite}
-                  disabled={isLoading}
-                  className="btn-cyber-outline p-2"
-                >
-                  <Heart
-                    size={20}
-                    fill={isFavorite(recipe) ? 'currentColor' : 'none'}
-                    className={isLoading ? 'animate-pulse' : ''}
-                  />
-                </button>
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="mt-2 text-xs text-red-400">
-                {error}
-              </div>
-            )}
+          <div>
+            <span className="font-medium">{recipe.author?.name}</span>
+            <p className="text-sm text-gray-400">
+              {formatDistance(new Date(recipe.createdAt), new Date(), { addSuffix: true })}
+            </p>
           </div>
-        </div>
+        </Link>
 
-        {/* Hover Effect Link */}
-        <div className="absolute inset-0 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none pr-4">
-          <ChevronRight className="text-cyber-primary" size={24} />
+        {/* Recipe Tags */}
+        <div className="flex gap-2">
+          {recipe.tags?.slice(0, 2).map(tag => (
+            <Link
+              key={tag}
+              href={createTagUrl(tag)}
+              className="px-2 py-1 text-xs rounded-full bg-space-700 hover:bg-space-600 transition-colors"
+            >
+              #{tag}
+            </Link>
+          ))}
         </div>
       </div>
-    </div>
+
+      {/* Recipe Image */}
+      <Link href={createRecipeUrl(recipe)}>
+        <div className="relative aspect-[16/9] overflow-hidden">
+          <img
+            src={recipe.imageUrlLarge || recipe.imageUrl || '/placeholder-recipe.jpg'}
+            alt={recipe.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+          
+          {/* Title Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent flex flex-col justify-end p-6">
+            <h2 className="text-2xl font-bold text-white mb-2">
+              {recipe.title}
+            </h2>
+            
+            {/* Quick Info */}
+            <div className="flex items-center gap-4 text-gray-200 text-sm">
+              <span>{recipe.cookingTime} mins</span>
+              <span>{recipe.ingredients?.length} ingredients</span>
+            </div>
+          </div>
+        </div>
+      </Link>
+
+      {/* Actions */}
+      <div className="p-4 flex items-center justify-between border-t border-space-700">
+        <div className="flex items-center gap-6">
+          <button
+            onClick={handleLike}
+            className="flex items-center gap-2 hover:text-cyber-primary transition-colors"
+          >
+            <Heart
+              size={20}
+              className={isLiked ? 'fill-cyber-primary text-cyber-primary' : ''}
+            />
+            <span>{recipe._count?.likes || 0}</span>
+          </button>
+
+          <Link
+            href={createRecipeUrl(recipe) + "#comments"} 
+            className="flex items-center gap-2 hover:text-cyber-primary transition-colors"
+          >
+            <MessageCircle size={20} />
+            <span>{recipe._count?.comments || 0}</span>
+          </Link>
+
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-2 hover:text-cyber-primary transition-colors"
+          >
+            <Share2 size={20} />
+          </button>
+        </div>
+
+        {/* Diet Badges */}
+        <div className="flex gap-2">
+          {recipe.dietaryInfo?.isVegetarian && (
+            <span className="px-2 py-1 rounded-lg bg-green-500/10 text-green-400 text-xs">
+              Vegetarian
+            </span>
+          )}
+          {recipe.dietaryInfo?.isVegan && (
+            <span className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs">
+              Vegan
+            </span>
+          )}
+        </div>
+      </div>
+    </article>
   );
 };
