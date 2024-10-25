@@ -24,6 +24,8 @@ function isValidJSON(str: string) {
   }
 }
 
+
+
 function normalizeTitle(title: string) {
   return decodeURIComponent(title)
     .replace(/[^a-zA-Z0-9\s]/g, '')
@@ -32,6 +34,7 @@ function normalizeTitle(title: string) {
 }
 
 export async function POST(req: NextRequest) {
+
   const session = await getSession();
   const userId = session?.user?.sub;
 

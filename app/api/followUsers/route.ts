@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
@@ -32,10 +33,10 @@ export async function POST(req: NextRequest) {
           followingId: followingId,
         },
       }),
-      // Create activity with only required fields
-      prisma.activity.createMany({
+      // Create activity with appropriate type
+      prisma.activity.create({
         data: {
-          action: 'followed',
+          type: 'started_following',
           userId: session.user.sub,
           targetUserId: followingId,
         },
@@ -68,10 +69,10 @@ export async function DELETE(req: NextRequest) {
           },
         },
       }),
-      // Create unfollow activity with only required fields
-      prisma.activity.createMany({
+      // Create unfollow activity
+      prisma.activity.create({
         data: {
-          action: 'unfollowed',
+          type: 'unfollowed',
           userId: session.user.sub,
           targetUserId: followingId,
         },

@@ -1,31 +1,15 @@
 'use client';
 
-'use client';
-
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { Filter, TrendingUp, Users, Loader2 } from 'lucide-react';
-import { useSocialFeed } from '../context/SocialFeedContext';
+import { Filter, Users, TrendingUp, ChefHat, Flame, Loader2 } from 'lucide-react';
 import { ActivityCard } from '../Components/social/ActivityCard';
-import { ActivityType, ActivityFilter } from '../types/social';
+import { SuggestedUsers } from '../Components/social/SuggestedUsers';
+import { TrendingTopics } from '../Components/social/TrendingTopics';
+import { useSocialFeed } from '../context/SocialFeedContext';
+import { ActivityType, ActivityFilter, TimeFrame } from '../types/social';
 
-// Constants
-const activityTypes: Array<{ value: ActivityType; label: string }> = [
-  { value: 'recipe_created', label: 'Recipe Created' },
-  { value: 'recipe_liked', label: 'Recipes Liked' },
-  { value: 'comment_added', label: 'Comments' },
-  { value: 'started_following', label: 'Following Updates' },
-  { value: 'achievement_earned', label: 'Achievements' }
-];
-
-const timeframes = [
-  { value: 'all', label: 'All Time' },
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'This Week' },
-  { value: 'month', label: 'This Month' }
-];
-
-export default function SocialFeed() {
+const SocialFeed = () => {
   const { ref, inView } = useInView();
   const pageRef = useRef(1);
   const {
@@ -37,6 +21,21 @@ export default function SocialFeed() {
     fetchActivities,
     setFilters
   } = useSocialFeed();
+
+  // Activity type options with icons and labels
+  const activityTypes: Array<{ value: ActivityType; label: string; icon: React.ReactNode }> = [
+    { value: 'recipe_created', label: 'Recipes', icon: <ChefHat size={16} /> },
+    { value: 'recipe_liked', label: 'Likes', icon: <Flame size={16} /> },
+    { value: 'started_following', label: 'Following', icon: <Users size={16} /> },
+    { value: 'achievement_earned', label: 'Achievements', icon: <TrendingUp size={16} /> }
+  ];
+
+  const timeframes: Array<{ value: TimeFrame; label: string }> = [
+    { value: 'today', label: 'Today' },
+    { value: 'week', label: 'This Week' },
+    { value: 'month', label: 'This Month' },
+    { value: 'all', label: 'All Time' }
+  ];
 
   useEffect(() => {
     fetchActivities(1);
@@ -50,21 +49,42 @@ export default function SocialFeed() {
     }
   }, [inView, hasMore, isLoading]);
 
-  const handleFilterChange = (filterType: keyof ActivityFilter, value: any) => {
-    setFilters({ ...filters, [filterType]: value });
-  }
+  const handleFilterChange = useCallback((key: keyof ActivityFilter, value: any) => {
+    setFilters((prevFilters: ActivityFilter) => {
+      if (key === 'type') {
+        return {
+          ...prevFilters,
+          type: value as ActivityType[]
+        };
+      }
+      if (key === 'timeframe') {
+        return {
+          ...prevFilters,
+          timeframe: value as TimeFrame
+        };
+      }
+      if (key === 'following') {
+        return {
+          ...prevFilters,
+          following: value as boolean
+        };
+      }
+      return prevFilters;
+    });
+  }, [setFilters]);
+
   return (
     <div className="page-container">
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar */}
-        <div className="lg:w-64 space-y-6">
+        {/* Filters Sidebar */}
+        <aside className="lg:w-64 space-y-6">
           <div className="card-cyber p-4">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Filter size={18} />
               Filters
             </h2>
             
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* Activity Types */}
               <div>
                 <label className="text-sm font-medium text-gray-400 mb-2 block">
@@ -76,17 +96,19 @@ export default function SocialFeed() {
                       <input
                         type="checkbox"
                         className="form-checkbox text-cyber-primary rounded border-space-600"
-                        checked={filters.type?.includes(type.value)}
+                        checked={filters.type?.includes(type.value) || false}
                         onChange={(e) => {
                           const currentTypes = filters.type || [];
-                          if (e.target.checked) {
-                            handleFilterChange('type', [...currentTypes, type.value]);
-                          } else {
-                            handleFilterChange('type', currentTypes.filter(t => t !== type.value));
-                          }
+                          const newTypes = e.target.checked
+                            ? [...currentTypes, type.value]
+                            : currentTypes.filter(t => t !== type.value);
+                          handleFilterChange('type', newTypes);
                         }}
                       />
-                      <span className="text-sm text-gray-300">{type.label}</span>
+                      <span className="flex items-center gap-2 text-sm text-gray-300">
+                        {type.icon}
+                        {type.label}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -95,57 +117,44 @@ export default function SocialFeed() {
               {/* Timeframe */}
               <div>
                 <label className="text-sm font-medium text-gray-400 mb-2 block">
-                  Timeframe
+                  Time Period
                 </label>
                 <select
                   className="form-select w-full bg-space-800 border-space-600 rounded-lg text-gray-300"
                   value={filters.timeframe || 'all'}
-                  onChange={(e) => handleFilterChange('timeframe', e.target.value)}
+                  onChange={(e) => handleFilterChange('timeframe', e.target.value as TimeFrame)}
                 >
-                  {timeframes.map(time => (
-                    <option key={time.value} value={time.value}>
-                      {time.label}
-                    </option>
+                  {timeframes.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Following Filter */}
+              <div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="form-checkbox text-cyber-primary rounded border-space-600"
+                    checked={filters.following || false}
+                    onChange={(e) => handleFilterChange('following', e.target.checked)}
+                  />
+                  <span className="text-sm text-gray-300">Following Only</span>
+                </label>
               </div>
             </div>
           </div>
 
           {/* Trending Topics */}
-          <div className="card-cyber p-4">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <TrendingUp size={18} />
-              Trending
-            </h2>
-            <div className="space-y-3">
-              {['#HealthyEating', '#QuickMeals', '#VeganRecipes'].map(topic => (
-                <button
-                  key={topic}
-                  className="block w-full text-left px-3 py-2 rounded-lg hover:bg-space-700 text-gray-300 hover:text-cyber-primary transition-colors"
-                >
-                  {topic}
-                </button>
-              ))}
-            </div>
-          </div>
+          <TrendingTopics />
 
-          {/* Suggested Follows */}
-          <div className="card-cyber p-4">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Users size={18} />
-              Suggested Follows
-            </h2>
-            <div className="space-y-4">
-              <SuggestedUser />
-            </div>
-          </div>
-        </div>
+          {/* Suggested Users */}
+          <SuggestedUsers />
+        </aside>
 
-        {/* Main Content */}
-        <div className="flex-grow space-y-6">
-          {/* Activity Feed */}
-          {activities.map((group, index) => (
+        {/* Main Feed */}
+        <main className="flex-grow space-y-6">
+          {activities.map((group) => (
             <div key={group.date} className="space-y-4">
               <div className="sticky top-0 z-10 bg-space-800/80 backdrop-blur-sm py-2">
                 <h3 className="text-sm font-medium text-gray-400">
@@ -154,48 +163,46 @@ export default function SocialFeed() {
               </div>
               <div className="space-y-4">
                 {group.activities.map((activity) => (
-                  <ActivityCard key={activity.id} activity={activity} />
+                  <ActivityCard 
+                    key={activity.id} 
+                    activity={activity} 
+                  />
                 ))}
               </div>
             </div>
           ))}
 
-          {/* Loading & Infinite Scroll */}
+          {/* Loading & Pagination */}
           <div ref={ref} className="py-4 text-center">
             {isLoading && (
               <div className="flex items-center justify-center gap-2 text-gray-400">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Loading more activities...
+                <span>Loading more activities...</span>
               </div>
             )}
-            {!hasMore && (
+            {!hasMore && activities.length > 0 && (
               <p className="text-gray-400">No more activities to load</p>
             )}
+            {!isLoading && activities.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-lg text-gray-400">No activities found</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Try adjusting your filters or follow more users to see their activities
+                </p>
+              </div>
+            )}
           </div>
-        </div>
+        </main>
       </div>
 
+      {/* Error Display */}
       {error && (
-        <div className="alert-error fixed bottom-4 right-4 p-4 rounded-lg">
+        <div className="fixed bottom-4 right-4 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
     </div>
   );
-}
+};
 
-// Suggested User Component
-const SuggestedUser = () => (
-  <div className="flex items-center gap-3">
-    <div className="w-10 h-10 rounded-full bg-space-700 flex items-center justify-center">
-      <span className="text-lg">👤</span>
-    </div>
-    <div className="flex-grow min-w-0">
-      <h3 className="text-sm font-medium text-gray-300 truncate">John Doe</h3>
-      <p className="text-xs text-gray-400">Popular Chef • 5k followers</p>
-    </div>
-    <button className="btn-cyber-outline py-1 px-3 text-sm">
-      Follow
-    </button>
-  </div>
-);
+export default SocialFeed;
