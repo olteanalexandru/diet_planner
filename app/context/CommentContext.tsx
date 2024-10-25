@@ -1,9 +1,13 @@
 'use client';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Comment } from '../types';
 
 interface CommentContextType {
   comments: Comment[];
+  isLoading: boolean;
+  error: string | null;
+  fetchComments: (recipeId: string) => Promise<void>;
   addComment: (recipeId: string, content: string) => Promise<void>;
   editComment: (commentId: string, content: string) => Promise<void>;
   deleteComment: (commentId: string) => Promise<void>;
@@ -15,72 +19,169 @@ const CommentContext = createContext<CommentContextType | undefined>(undefined);
 
 export const CommentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [comments, setComments] = useState<Comment[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addComment = async (recipeId: string, content: string) => {
+  const fetchComments = useCallback(async (recipeId: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/comments?recipeId=${recipeId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch comments');
+      }
+      const data = await response.json();
+      setComments(data.comments);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      setError('Failed to load comments');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const addComment = useCallback(async (recipeId: string, content: string) => {
+    setIsLoading(true);
+    setError(null);
     try {
       const response = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipeId, content }),
       });
-      const data = await response.json();
-      setComments(prevComments => [...prevComments, data.comment]);
+
+      if (!response.ok) {
+        throw new Error('Failed to add comment');
+      }
+
+      const { comment } = await response.json();
+      setComments(prevComments => [comment, ...prevComments]);
     } catch (error) {
       console.error('Error adding comment:', error);
+      setError('Failed to add comment');
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  const editComment = async (commentId: string, content: string) => {
+  const editComment = useCallback(async (commentId: string, content: string) => {
+    setIsLoading(true);
+    setError(null);
     try {
       const response = await fetch(`/api/comments/${commentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
       });
-      const data = await response.json();
-      setComments(prevComments => 
-        prevComments.map(comment => comment.id === commentId ? data.comment : comment)
+
+      if (!response.ok) {
+        throw new Error('Failed to edit comment');
+      }
+
+      const { comment } = await response.json();
+      setComments(prevComments =>
+        prevComments.map(c => (c.id === commentId ? comment : c))
       );
     } catch (error) {
       console.error('Error editing comment:', error);
+      setError('Failed to edit comment');
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  const deleteComment = async (commentId: string) => {
+  const deleteComment = useCallback(async (commentId: string) => {
+    setIsLoading(true);
+    setError(null);
     try {
-      await fetch(`/api/comments/${commentId}`, { method: 'DELETE' });
-      setComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete comment');
+      }
+
+      setComments(prevComments =>
+        prevComments.filter(comment => comment.id !== commentId)
+      );
     } catch (error) {
       console.error('Error deleting comment:', error);
+      setError('Failed to delete comment');
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  const likeComment = async (commentId: string) => {
+  const likeComment = useCallback(async (commentId: string) => {
+    setError(null);
     try {
-      const response = await fetch(`/api/comments/${commentId}/like`, { method: 'POST' });
-      const data = await response.json();
-      setComments(prevComments => prevComments.map(comment => 
-        comment.id === commentId ? { ...comment, likes: data.likes, isLiked: true } : comment
-      ));
+      const response = await fetch(`/api/comments/${commentId}/like`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to like comment');
+      }
+
+      const { likes } = await response.json();
+      setComments(prevComments =>
+        prevComments.map(comment =>
+          comment.id === commentId
+            ? { ...comment, likes, isLiked: true }
+            : comment
+        )
+      );
     } catch (error) {
       console.error('Error liking comment:', error);
+      setError('Failed to like comment');
+      throw error;
     }
-  };
+  }, []);
 
-  const unlikeComment = async (commentId: string) => {
+  const unlikeComment = useCallback(async (commentId: string) => {
+    setError(null);
     try {
-      const response = await fetch(`/api/comments/${commentId}/like`, { method: 'DELETE' });
-      const data = await response.json();
-      setComments(prevComments => prevComments.map(comment => 
-        comment.id === commentId ? { ...comment, likes: data.likes, isLiked: false } : comment
-      ));
+      const response = await fetch(`/api/comments/${commentId}/like`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to unlike comment');
+      }
+
+      const { likes } = await response.json();
+      setComments(prevComments =>
+        prevComments.map(comment =>
+          comment.id === commentId
+            ? { ...comment, likes, isLiked: false }
+            : comment
+        )
+      );
     } catch (error) {
       console.error('Error unliking comment:', error);
+      setError('Failed to unlike comment');
+      throw error;
     }
-  };
+  }, []);
 
   return (
-    <CommentContext.Provider value={{ comments, addComment, editComment, deleteComment, likeComment, unlikeComment }}>
+    <CommentContext.Provider
+      value={{
+        comments,
+        isLoading,
+        error,
+        fetchComments,
+        addComment,
+        editComment,
+        deleteComment,
+        likeComment,
+        unlikeComment,
+      }}
+    >
       {children}
     </CommentContext.Provider>
   );

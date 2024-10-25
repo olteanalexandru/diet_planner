@@ -1,0 +1,56 @@
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes likeAnimation {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  
+  @keyframes slideIn {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  
+  .activity-card {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .like-button.active svg {
+    animation: likeAnimation 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  
+  .activity-comment {
+    animation: slideIn 0.3s ease-out;
+  }
+  
+  // Add to your tailwind.config.js
+  
+  module.exports = {
+    theme: {
+      extend: {
+        keyframes: {
+          fadeIn: {
+            '0%': { opacity: '0', transform: 'translateY(10px)' },
+            '100%': { opacity: '1', transform: 'translateY(0)' },
+          },
+          likeAnimation: {
+            '0%': { transform: 'scale(1)' },
+            '50%': { transform: 'scale(1.2)' },
+            '100%': { transform: 'scale(1)' },
+          },
+          slideIn: {
+            '0%': { transform: 'translateX(-100%)' },
+            '100%': { transform: 'translateX(0)' },
+          },
+        },
+        animation: {
+          'fade-in': 'fadeIn 0.3s ease-out',
+          'like-button': 'likeAnimation 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          'slide-in': 'slideIn 0.3s ease-out',
+        },
+      },
+    },
+  };

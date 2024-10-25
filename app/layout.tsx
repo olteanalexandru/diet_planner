@@ -5,7 +5,9 @@ import { FavoritesProvider } from './context/FavoritesContext';
 import { RecipeProvider } from './context/RecipeContext';
 import { CommentProvider } from './context/CommentContext';
 import { UserProvider } from '@auth0/nextjs-auth0/client';
+import { SocialFeedProvider } from './context/SocialFeedContext';
 import Header from './Components/Header';
+import { ThemeProvider } from './context/ThemeContext';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -30,20 +32,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} 
-        bg-gradient-to-b from-space-800 to-space-900 
-        text-gray-100 min-h-screen
-        font-geist-sans antialiased selection:bg-cyber-primary/20 selection:text-cyber-primary`}>
-        {/* Background Effects */}
-        <div className="fixed inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-20"></div>
-        <div className="fixed inset-0 bg-gradient-to-tr from-cyber-primary/5 via-transparent to-cyber-accent/5"></div>
-        
-        {/* Main Content */}
-        <UserProvider>
+    <html lang="en">
+    <body className={`${geistSans.variable} ${geistMono.variable} 
+      bg-gradient-to-b min-h-screen font-geist-sans antialiased`}
+    >
+      <UserProvider>
+        <ThemeProvider>
+       
           <RecipeProvider>
             <CommentProvider>
               <FavoritesProvider>
+                <SocialFeedProvider>
                 <div className="relative z-10 flex flex-col min-h-screen">
                   <Header />
                   <main className="flex-grow container mx-auto px-4 py-8">
@@ -57,9 +56,12 @@ export default function RootLayout({
                     </div>
                   </footer>
                 </div>
+                </SocialFeedProvider>
               </FavoritesProvider>
             </CommentProvider>
           </RecipeProvider>
+        </ThemeProvider>
+
         </UserProvider>
       </body>
     </html>

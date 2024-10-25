@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     await prisma.comment.deleteMany();
     await prisma.recipe.deleteMany();
     await prisma.user.deleteMany();
+    
 
     return NextResponse.json({ message: 'Database cleared successfully' });
   } catch (error) {

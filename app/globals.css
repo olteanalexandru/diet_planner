@@ -205,3 +205,29 @@
 .image-hover {
   @apply transition-transform duration-300 hover:scale-105;
 }
+@layer base {
+  :root[class~="theme-dark"] {
+    --background: 15 23 42;
+    --foreground: 241 245 249;
+    --muted: 51 65 85;
+    --accent: 99 102 241;
+  }
+
+  :root[class~="theme-light"] {
+    --background: 255 255 255;
+    --foreground: 15 23 42;
+    --muted: 100 116 139;
+    --accent: 59 130 246;
+  }
+
+  :root[class~="theme-foodie"] {
+    --background: 255 247 237;
+    --foreground: 124 45 18;
+    --muted: 234 88 12;
+    --accent: 249 115 22;
+  }
+
+  body {
+    @apply bg-[rgb(var(--background))] text-[rgb(var(--foreground))];
+  }
+}

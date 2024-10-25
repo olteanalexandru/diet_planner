@@ -24,7 +24,12 @@ export default function Dashboard() {
 
   const fetchCustomRecipes = async () => {
     try {
-      const response = await fetch('/api/recipes');
+      if (!user?.sub) {
+        throw new Error('No user ID available');
+      }
+  
+      const response = await fetch(`/api/recipes?userId=${encodeURIComponent(user.sub)}`);
+      
       if (!response.ok) {
         throw new Error('Failed to fetch custom recipes');
       }
@@ -32,7 +37,7 @@ export default function Dashboard() {
       setCustomRecipes(data.recipes);
     } catch (error) {
       console.error('Error fetching custom recipes:', error);
-      setError('Failed to load custom recipes');
+      setError(error instanceof Error ? error.message : 'Failed to load custom recipes');
     }
   };
 

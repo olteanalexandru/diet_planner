@@ -18,6 +18,11 @@ module.exports = {
           'dark-600': '#2A2A2E',
           glow: '#00F5D4',
         },
+        'foodie': {
+          50: '#fff7ed',
+          // ... add more orange shades
+          900: '#7c2d12',
+        },
         // Futuristic grays
         'space': {
           50: '#EAEAEA',

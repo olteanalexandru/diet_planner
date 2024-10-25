@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { LoginButton } from './LoginButton';
+import ThemeSwitcher from './ThemeSwitcher';
 
 const Header: React.FC = () => {
   return (
@@ -33,6 +34,7 @@ const Header: React.FC = () => {
             >
               Social Feed
             </Link>
+            <ThemeSwitcher />
             <div className="pl-6 border-l border-space-600">
               <LoginButton />
             </div>
