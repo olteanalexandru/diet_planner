@@ -14,9 +14,34 @@ export const LoginButton: React.FC = () => {
     return (
       <div className="d-flex align-items-center">
         <span className="me-2">Welcome, {user.name}!</span>
-        <Link href="/api/auth/logout" className="btn btn-outline-light">
+        {/* <Link href="/api/auth/logout" className="btn btn-outline-light"> */}
+        <button
+          className="btn btn-outline-light"
+          onClick={async () => {
+            try {
+              const response = await fetch('/api/ClearDatabase', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+              });
+
+              if (!response.ok) {
+          throw new Error('Network response was not ok');
+              }
+
+              // Optionally, handle the response data here
+              console.log('Database cleared successfully');
+            } catch (error) {
+              console.error('Failed to clear database:', error);
+            }
+
+            // Log out the user
+            window.location.href = '/api/auth/logout';
+          }}
+        >
           Log Out
-        </Link>
+        </button>
       </div>
     );
   }

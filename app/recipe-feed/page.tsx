@@ -5,7 +5,7 @@ import { useInView } from 'react-intersection-observer';
 import { Filter, Loader2, TrendingUp, Clock, ArrowUp } from 'lucide-react';
 import { Recipe } from '../types';
 import { RecipeGridSkeleton } from '../Components/recipes/RecipeSkeleton';
-import {RecipeCard} from '../Components/recipes/FeedRecipeCard';
+import { FeedRecipeCard } from '../Components/recipes/FeedRecipeCard';
 
 type SortOption = 'trending' | 'latest';
 
@@ -18,7 +18,7 @@ const CATEGORIES = [
   { id: 'budget', name: 'Budget', icon: '💰' },
 ] as const;
 
-const RecipeFeed = () => {
+export default function RecipeFeed() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +47,7 @@ const RecipeFeed = () => {
       const response = await fetch('/api/recipes/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, sort, page: currentPage })
+        body: JSON.stringify({ category, sort, page: currentPage }),
       });
 
       if (!response.ok) throw new Error('Failed to fetch recipes');
@@ -62,6 +62,56 @@ const RecipeFeed = () => {
       setError(err instanceof Error ? err.message : 'Failed to load recipes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLike = async (recipeId: string) => {
+    try {
+      const response = await fetch(`/api/recipes/${recipeId}/like`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) throw new Error('Failed to like recipe');
+      
+      setRecipes(prev => prev.map(recipe => 
+        recipe.id === recipeId 
+          ? { 
+              ...recipe, 
+              isLiked: true,
+              _count: {
+                ...recipe._count,
+                likes: (recipe._count?.likes || 0) + 1
+              }
+            }
+          : recipe
+      ));
+    } catch (error) {
+      console.error('Error liking recipe:', error);
+    }
+  };
+
+  const handleUnlike = async (recipeId: string) => {
+    try {
+      const response = await fetch(`/api/recipes/${recipeId}/like`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) throw new Error('Failed to unlike recipe');
+      
+      setRecipes(prev => prev.map(recipe => 
+        recipe.id === recipeId 
+          ? { 
+              ...recipe, 
+              isLiked: false,
+              _count: {
+                ...recipe._count,
+                likes: Math.max(0, (recipe._count?.likes || 1) - 1)
+              }
+            }
+          : recipe
+      ));
+    } catch (error) {
+      console.error('Error unliking recipe:', error);
     }
   };
 
@@ -90,7 +140,7 @@ const RecipeFeed = () => {
       setPage(prev => prev + 1);
       fetchRecipes();
     }
-  }, [inView]);
+  }, [inView, hasMore, loading]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -201,7 +251,12 @@ const RecipeFeed = () => {
             ) : (
               <div className="space-y-6">
                 {recipes.map((recipe) => (
-                  <RecipeCard key={recipe.id} recipe={recipe} />
+                  <FeedRecipeCard 
+                    key={recipe.id} 
+                    recipe={recipe}
+                    onLike={handleLike}
+                    onUnlike={handleUnlike}
+                  />
                 ))}
                 
                 {/* Loading State */}
@@ -234,6 +289,4 @@ const RecipeFeed = () => {
       )}
     </div>
   );
-};
-
-export default RecipeFeed;
+}

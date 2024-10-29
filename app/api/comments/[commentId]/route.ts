@@ -60,18 +60,23 @@ export async function PUT(req: NextRequest, { params }: { params: { commentId: s
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { commentId: string } }) {
-  const session = await getSession();
-  if (!session || !session.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
 
-  const { commentId } = params;
-
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { commentId: string } }
+) {
   try {
-    const comment = await prisma.comment.findUnique({ 
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { commentId } = params;
+
+    // Verify comment exists and user owns it
+    const comment = await prisma.comment.findUnique({
       where: { id: commentId },
-      include: { user: true }
+      include: { user: true },
     });
 
     if (!comment) {
@@ -82,11 +87,22 @@ export async function DELETE(req: NextRequest, { params }: { params: { commentId
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    await prisma.comment.delete({ where: { id: commentId } });
+    // Delete comment and all associated likes in a transaction
+    await prisma.$transaction([
+      prisma.commentLike.deleteMany({
+        where: { commentId },
+      }),
+      prisma.comment.delete({
+        where: { id: commentId },
+      }),
+    ]);
 
     return NextResponse.json({ message: 'Comment deleted successfully' });
   } catch (error) {
     console.error('Error deleting comment:', error);
-    return NextResponse.json({ error: 'Error deleting comment' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Error deleting comment' },
+      { status: 500 }
+    );
   }
 }

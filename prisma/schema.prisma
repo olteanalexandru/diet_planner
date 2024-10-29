@@ -8,67 +8,91 @@ datasource db {
 }
 
 model User {
-  id                  String                @id
-  email               String?               @unique
-  name                String?
-  subscriptionStatus  String                @default("free")
-  createdAt           DateTime              @default(now())
-  recipes             Recipe[]
-  favorites           Favorite[]
-  followers           Follow[]              @relation("Following")
-  following           Follow[]              @relation("Follower")
-  comments            Comment[]
-  commentLikes        CommentLike[]
-  activities          Activity[]            @relation("ActivityUser")
-  activityLikes       ActivityLike[]
-  activityComments    ActivityComment[]
-  achievements        Achievement[]
-  mealPlans          MealPlan[]
-  receivedActivities  Activity[]            @relation("TargetUser")
+  id                   String                @id
+  email                String?               @unique
+  name                 String?
+  bio                  String?               
+  location             String?               
+  website              String?               
+  specialties          String[]              
+  dietaryPreferences   String[]              
+  subscriptionStatus   String                @default("free")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt  
+  avatar               String?               
+  recipes              Recipe[]
+  favorites            Favorite[]
+  followers            Follow[]              @relation("Following")
+  following            Follow[]              @relation("Follower")
+  comments             Comment[]
+  commentLikes         CommentLike[]
+  activities           Activity[]            @relation("ActivityUser")
+  activityLikes        ActivityLike[]
+  activityComments     ActivityComment[]
+  achievements         Achievement[]
+  mealPlans            MealPlan[]
+  receivedActivities   Activity[]            @relation("TargetUser")
   activityCommentLikes ActivityCommentLike[]
+  RecipeLike           RecipeLike[]
 }
 
 model Recipe {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   title         String
+  description   String?      
   ingredients   String[]
   instructions  String[]
   cookingTime   Int
+  servings      Int          @default(4)  
+  difficulty    String       @default("medium") 
+  category      String       @default("other")
+  cuisine       String?      
+  tags          String[]     @default([])
+  dietaryInfo   Json         @default("{}")
+  prepTime      Int?         
+  totalTime     Int?         
+  calories      Int?         
+  protein       Float?       
+  carbs         Float?       
+  fat           Float?       
+  rating        Float?       
+  ratingCount   Int          @default(0)  
   imageUrl      String?
   imageUrlLarge String?
-  category      String      @default("all")
-  tags          String[]    @default([])
-  dietaryInfo   Json       @default("{}")
-  viewCount     Int        @default(0)
+  viewCount     Int          @default(0)
+  isPublished   Boolean      @default(true)  
   authorId      String
-  author        User        @relation(fields: [authorId], references: [id])
+  author        User         @relation(fields: [authorId], references: [id])
+  likes         RecipeLike[]
   favorites     Favorite[]
   comments      Comment[]
   activities    Activity[]
   mealPlans     MealPlan[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@index([authorId])
   @@index([category])
+  @@index([difficulty])
   @@index([createdAt])
   @@index([viewCount])
+  @@index([rating])
 }
 
 model Activity {
-  id              String            @id @default(cuid())
-  type            String
-  userId          String
-  targetUserId    String?
-  recipeId        String?
-  milestone       Int?
-  achievementId   String?
-  user            User              @relation("ActivityUser", fields: [userId], references: [id])
-  targetUser      User?             @relation("TargetUser", fields: [targetUserId], references: [id])
-  recipe          Recipe?           @relation(fields: [recipeId], references: [id])
-  likes           ActivityLike[]
-  comments        ActivityComment[]
-  createdAt       DateTime          @default(now())
+  id            String            @id @default(cuid())
+  type          String           // Should be one of: 'generated', 'created', 'liked', 'commented', 'shared'
+  userId        String
+  targetUserId  String?
+  recipeId      String?
+  milestone     Int?
+  achievementId String?
+  user          User              @relation("ActivityUser", fields: [userId], references: [id])
+  targetUser    User?             @relation("TargetUser", fields: [targetUserId], references: [id])
+  recipe        Recipe?           @relation(fields: [recipeId], references: [id])
+  likes         ActivityLike[]
+  comments      ActivityComment[]
+  createdAt     DateTime          @default(now())
 
   @@index([userId])
   @@index([targetUserId])
@@ -89,15 +113,15 @@ model ActivityLike {
 }
 
 model ActivityComment {
-  id        String                @id @default(cuid())
-  content   String
-  userId    String
+  id         String                @id @default(cuid())
+  content    String
+  userId     String
   activityId String
-  user      User                  @relation(fields: [userId], references: [id])
-  activity  Activity              @relation(fields: [activityId], references: [id])
-  likes     ActivityCommentLike[]
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
+  user       User                  @relation(fields: [userId], references: [id])
+  activity   Activity              @relation(fields: [activityId], references: [id])
+  likes      ActivityCommentLike[]
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
 
   @@index([userId])
   @@index([activityId])
@@ -191,6 +215,19 @@ model MealPlan {
   recipe    Recipe   @relation(fields: [recipeId], references: [id])
   createdAt DateTime @default(now())
 
+  @@index([userId])
+  @@index([recipeId])
+}
+
+model RecipeLike {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  user      User     @relation(fields: [userId], references: [id])
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, recipeId])
   @@index([userId])
   @@index([recipeId])
 }

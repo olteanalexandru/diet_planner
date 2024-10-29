@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.activity.create({
       data: {
-        action: 'created',
+        type: "generate",
         user: { connect: { id: session.user.sub } },
         recipe: { connect: { id: recipe.id } },
       },

@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import { Recipe } from '../types';
 import { RecipeCard } from '../Components/recipes/RecipeCard';
 import { RecipeGridSkeleton } from '../Components/recipes/RecipeSkeleton';
-// import { useUser } from '@auth0/nextjs-auth0/client';
 import { Loader2 } from 'lucide-react';
 
 export default function Recipes() {
@@ -14,7 +13,6 @@ export default function Recipes() {
   const [fetchingMore, setFetchingMore] = useState(false);
   const searchParams = useSearchParams();
   const query = searchParams.get('query');
-  // const { user } = useUser();
 
   useEffect(() => {
     if (query) {
@@ -86,8 +84,12 @@ export default function Recipes() {
 
         {/* Recipe Grid */}
         <div className="grid gap-6">
-          {recipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
+          {recipes?.map((recipe) => (
+            <RecipeCard 
+              key={recipe.id} 
+              recipe={recipe}
+              isAIGenerated={!recipe.authorId} // Mark as AI generated if no author
+            />
           ))}
         </div>
 

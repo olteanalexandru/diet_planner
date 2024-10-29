@@ -1,219 +1,397 @@
 'use client';
-
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Minus, Loader2, ImagePlus } from 'lucide-react';
+import { Recipe } from '@/app/types';
+import { Loader2, Plus, X } from 'lucide-react';
 
-export const RecipeForm = () => {
-  const router = useRouter();
-  const [title, setTitle] = useState('');
-  const [ingredients, setIngredients] = useState(['']);
-  const [instructions, setInstructions] = useState(['']);
-  const [cookingTime, setCookingTime] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+interface RecipeFormProps {
+  initialData?: Partial<Recipe>;
+  mode?: 'create' | 'edit';
+  onSubmit: (data: Partial<Recipe>) => Promise<void>;
+  onDelete?: () => Promise<void>;
+}
+
+const CATEGORIES = [
+  { id: 'breakfast', name: 'Breakfast', icon: '🍳' },
+  { id: 'lunch', name: 'Lunch', icon: '🥪' },
+  { id: 'dinner', name: 'Dinner', icon: '🍽️' },
+  { id: 'dessert', name: 'Dessert', icon: '🍰' },
+  { id: 'snack', name: 'Snack', icon: '🍿' },
+  { id: 'beverage', name: 'Beverage', icon: '🥤' },
+] as const;
+
+const DIETARY_TAGS = [
+  'Vegetarian',
+  'Vegan',
+  'Gluten-Free',
+  'Dairy-Free',
+  'Low-Carb',
+  'Keto',
+  'Paleo',
+  'Mediterranean',
+];
+
+const CUISINE_TAGS = [
+  'Italian',
+  'Mexican',
+  'Chinese',
+  'Japanese',
+  'Indian',
+  'Thai',
+  'French',
+  'Mediterranean',
+  'American',
+];
+
+const DIFFICULTY_LEVELS = [
+  { id: 'easy', name: 'Easy', icon: '👶' },
+  { id: 'medium', name: 'Medium', icon: '👨‍🍳' },
+  { id: 'hard', name: 'Advanced', icon: '👨‍🔬' },
+];
+
+export const RecipeForm: React.FC<RecipeFormProps> = ({
+  initialData,
+  onSubmit,
+}) => {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleAddIngredient = () => {
-    setIngredients([...ingredients, '']);
-  };
-
-  const handleRemoveIngredient = (index: number) => {
-    setIngredients(ingredients.filter((_, i) => i !== index));
-  };
-
-  const handleIngredientChange = (index: number, value: string) => {
-    const newIngredients = [...ingredients];
-    newIngredients[index] = value;
-    setIngredients(newIngredients);
-  };
-
-  const handleAddInstruction = () => {
-    setInstructions([...instructions, '']);
-  };
-
-  const handleRemoveInstruction = (index: number) => {
-    setInstructions(instructions.filter((_, i) => i !== index));
-  };
-
-  const handleInstructionChange = (index: number, value: string) => {
-    const newInstructions = [...instructions];
-    newInstructions[index] = value;
-    setInstructions(newInstructions);
-  };
+  const [formData, setFormData] = useState({
+    title: initialData?.title || '',
+    ingredients: initialData?.ingredients || [''],
+    instructions: initialData?.instructions || [''],
+    cookingTime: initialData?.cookingTime || 30,
+    servings: initialData?.servings || 4,
+    difficulty: initialData?.difficulty || 'medium',
+    category: initialData?.category || 'dinner',
+    tags: initialData?.tags || [],
+    dietaryInfo: initialData?.dietaryInfo || {
+      isVegetarian: false,
+      isVegan: false,
+      isGlutenFree: false,
+      isDairyFree: false,
+    },
+    customTags: [] as string[],
+    newTag: '',
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('/api/recipes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          ingredients: ingredients.filter(i => i.trim() !== ''),
-          instructions: instructions.filter(i => i.trim() !== ''),
-          cookingTime: parseInt(cookingTime),
-          imageUrl
-        }),
-      });
-      
-      if (response.ok) {
-        router.push('/dashboard');
-      } else {
-        const data = await response.json();
-        setError(data.error || 'An error occurred while submitting the recipe');
-      }
-    } catch (error) {
-      console.error('Error submitting recipe:', error);
-      setError('An error occurred while submitting the recipe');
+      const recipeData = {
+        ...formData,
+        tags: [...formData.tags, ...formData.customTags],
+        customTags: undefined,
+        newTag: undefined,
+      };
+
+      await onSubmit(recipeData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save recipe');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
+  const addTag = () => {
+    if (formData.newTag.trim() && !formData.customTags.includes(formData.newTag.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        customTags: [...prev.customTags, prev.newTag.trim()],
+        newTag: '',
+      }));
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    setFormData(prev => ({
+      ...prev,
+      customTags: prev.customTags.filter(t => t !== tag),
+      tags: prev.tags.filter(t => t !== tag),
+    }));
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="alert-error">
+        <div className="p-4 bg-red-500/10 border border-red-500 rounded-lg text-red-400">
           {error}
         </div>
       )}
 
-      {/* Title & Time */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="form-group">
-          <label htmlFor="title" className="form-label">Recipe Title</label>
-          <input
-            type="text"
-            id="title"
-            className="form-input"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter recipe title"
-            required
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium mb-2">Title</label>
+        <input
+          type="text"
+          value={formData.title}
+          onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
+          className="input-cyber w-full"
+          required
+        />
+      </div>
 
-        <div className="form-group">
-          <label htmlFor="cookingTime" className="form-label">Cooking Time (minutes)</label>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Cooking Time (minutes)</label>
           <input
             type="number"
-            id="cookingTime"
-            className="form-input"
-            value={cookingTime}
-            onChange={(e) => setCookingTime(e.target.value)}
-            placeholder="Enter cooking time"
+            value={formData.cookingTime}
+            onChange={e => setFormData(prev => ({ 
+              ...prev, 
+              cookingTime: Math.max(1, parseInt(e.target.value) || 1)
+            }))}
+            className="input-cyber w-full"
             required
+            min="1"
           />
         </div>
-      </div>
 
-      {/* Image URL */}
-      <div className="form-group">
-        <label htmlFor="imageUrl" className="form-label">Image URL</label>
-        <div className="relative">
+        <div>
+          <label className="block text-sm font-medium mb-2">Servings</label>
           <input
-            type="url"
-            id="imageUrl"
-            className="form-input pl-10"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="Enter image URL"
+            type="number"
+            value={formData.servings}
+            onChange={e => setFormData(prev => ({ 
+              ...prev, 
+              servings: Math.max(1, parseInt(e.target.value) || 1)
+            }))}
+            className="input-cyber w-full"
+            required
+            min="1"
           />
-          <ImagePlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Difficulty</label>
+          <select
+            value={formData.difficulty}
+            onChange={e => setFormData(prev => ({ ...prev, difficulty: e.target.value as 'easy' | 'medium' | 'hard' }))}
+            className="input-cyber w-full"
+            required
+          >
+            {DIFFICULTY_LEVELS.map(level => (
+              <option key={level.id} value={level.id}>
+                {level.icon} {level.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Ingredients */}
-      <div className="form-group">
-        <div className="flex justify-between items-center mb-4">
-          <label className="form-label m-0">Ingredients</label>
+      <div>
+        <label className="block text-sm font-medium mb-2">Category</label>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {CATEGORIES.map(category => (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, category: category.id }))}
+              className={`p-4 rounded-lg border transition-colors ${
+                formData.category === category.id
+                  ? 'bg-cyber-primary/10 border-cyber-primary'
+                  : 'border-space-600 hover:border-cyber-primary'
+              }`}
+            >
+              <span className="text-2xl mb-2">{category.icon}</span>
+              <span className="block">{category.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Dietary Information</label>
+        <div className="flex flex-wrap gap-2">
+          {DIETARY_TAGS.map(tag => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => setFormData(prev => ({
+                ...prev,
+                tags: prev.tags.includes(tag)
+                  ? prev.tags.filter(t => t !== tag)
+                  : [...prev.tags, tag]
+              }))}
+              className={`px-3 py-1 rounded-full border transition-colors ${
+                formData.tags.includes(tag)
+                  ? 'bg-cyber-primary/10 border-cyber-primary'
+                  : 'border-space-600 hover:border-cyber-primary'
+              }`}
+              >
+                {tag}
+              </button>
+            ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Cuisine Type</label>
+        <div className="flex flex-wrap gap-2">
+          {CUISINE_TAGS.map(tag => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => setFormData(prev => ({
+                ...prev,
+                tags: prev.tags.includes(tag)
+                  ? prev.tags.filter(t => t !== tag)
+                  : [...prev.tags, tag]
+              }))}
+              className={`px-3 py-1 rounded-full border transition-colors ${
+                formData.tags.includes(tag)
+                  ? 'bg-cyber-primary/10 border-cyber-primary'
+                  : 'border-space-600 hover:border-cyber-primary'
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Custom Tags */}
+      <div>
+        <label className="block text-sm font-medium mb-2">Custom Tags</label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {formData.customTags.map(tag => (
+            <span
+              key={tag}
+              className="px-3 py-1 rounded-full bg-cyber-primary/10 border border-cyber-primary flex items-center gap-2"
+            >
+              {tag}
+              <button
+                type="button"
+                onClick={() => removeTag(tag)}
+                className="hover:text-red-400"
+              >
+                <X size={14} />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={formData.newTag}
+            onChange={e => setFormData(prev => ({ ...prev, newTag: e.target.value }))}
+            onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), addTag())}
+            className="input-cyber flex-grow"
+            placeholder="Add custom tag..."
+          />
           <button
             type="button"
-            onClick={handleAddIngredient}
-            className="btn-cyber-outline py-1 px-2"
+            onClick={addTag}
+            className="btn-cyber-outline"
           >
-            <Plus className="w-4 h-4" />
+            <Plus size={20} />
           </button>
         </div>
-        <div className="space-y-3">
-          {ingredients.map((ingredient, index) => (
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Ingredients</label>
+        <div className="space-y-2">
+          {formData.ingredients.map((ingredient, index) => (
             <div key={index} className="flex gap-2">
               <input
                 type="text"
-                className="form-input"
                 value={ingredient}
-                onChange={(e) => handleIngredientChange(index, e.target.value)}
+                onChange={e => {
+                  const newIngredients = [...formData.ingredients];
+                  newIngredients[index] = e.target.value;
+                  setFormData(prev => ({ ...prev, ingredients: newIngredients }));
+                }}
+                className="input-cyber flex-grow"
                 placeholder={`Ingredient ${index + 1}`}
                 required
               />
-              {ingredients.length > 1 && (
+              {formData.ingredients.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => handleRemoveIngredient(index)}
-                  className="btn-cyber-outline py-2 px-2"
+                  onClick={() => {
+                    const newIngredients = formData.ingredients.filter((_, i) => i !== index);
+                    setFormData(prev => ({ ...prev, ingredients: newIngredients }));
+                  }}
+                  className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"
                 >
-                  <Minus className="w-4 h-4" />
+                  <X size={20} />
                 </button>
               )}
             </div>
           ))}
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({
+              ...prev,
+              ingredients: [...prev.ingredients, '']
+            }))}
+            className="btn-cyber-outline w-full flex items-center justify-center gap-2"
+          >
+            <Plus size={16} />
+            Add Ingredient
+          </button>
         </div>
       </div>
 
-      {/* Instructions */}
-      <div className="form-group">
-        <div className="flex justify-between items-center mb-4">
-          <label className="form-label m-0">Instructions</label>
-          <button
-            type="button"
-            onClick={handleAddInstruction}
-            className="btn-cyber-outline py-1 px-2"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="space-y-3">
-          {instructions.map((instruction, index) => (
+      <div>
+        <label className="block text-sm font-medium mb-2">Instructions</label>
+        <div className="space-y-2">
+          {formData.instructions.map((instruction, index) => (
             <div key={index} className="flex gap-2">
               <textarea
-                className="form-textarea"
                 value={instruction}
-                onChange={(e) => handleInstructionChange(index, e.target.value)}
+                onChange={e => {
+                  const newInstructions = [...formData.instructions];
+                  newInstructions[index] = e.target.value;
+                  setFormData(prev => ({ ...prev, instructions: newInstructions }));
+                }}
+                className="input-cyber flex-grow"
+                rows={2}
                 placeholder={`Step ${index + 1}`}
                 required
               />
-              {instructions.length > 1 && (
+              {formData.instructions.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => handleRemoveInstruction(index)}
-                  className="btn-cyber-outline py-2 px-2"
+                  onClick={() => {
+                    const newInstructions = formData.instructions.filter((_, i) => i !== index);
+                    setFormData(prev => ({ ...prev, instructions: newInstructions }));
+                  }}
+                  className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"
                 >
-                  <Minus className="w-4 h-4" />
+                  <X size={20} />
                 </button>
               )}
             </div>
           ))}
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({
+              ...prev,
+              instructions: [...prev.instructions, '']
+            }))}
+            className="btn-cyber-outline w-full flex items-center justify-center gap-2"
+          >
+            <Plus size={16} />
+            Add Instruction
+          </button>
         </div>
       </div>
 
-      {/* Submit Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-4 pt-6">
         <button
           type="submit"
-          disabled={isSubmitting}
-          className="btn-cyber px-8 py-3"
+          disabled={loading}
+          className="btn-cyber"
         >
-          {isSubmitting ? (
+          {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Creating Recipe...
+              Saving...
             </>
           ) : (
-            'Create Recipe'
+            'Save Recipe'
           )}
         </button>
       </div>

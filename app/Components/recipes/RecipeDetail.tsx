@@ -1,29 +1,53 @@
-
 import React, { useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { Heart, Clock, Share2, ChefHat, MessageCircle, Edit2, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Heart, Clock, Share2, ChefHat, Edit2, Save, Loader2, MessageCircle, PenTool } from 'lucide-react';
 import { Recipe } from '@/app/types';
+import Link from 'next/link';
 import { Comment } from '../Comment';
 import { useFavorites } from '@/app/context/FavoritesContext';
 import { useComments } from '@/app/context/CommentContext';
+import { useRecipes } from '@/app/context/RecipeContext';
 import { createUserUrl, createShareUrl } from '@/app/utils/url';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { FollowButton } from '../FollowButton';
+import { RecipeEditModal } from './RecipeEditModal';
+import { RecipeManagement } from './RecipeManagement';
+
+interface RecipeDetailProps {
+  recipe: Recipe;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}
+
+
+interface RecipeDetailProps {
+  recipe: Recipe;
+  isGeneratedRecipe?: boolean;
+}
+
 
 interface RecipeDetailProps {
   recipe: Recipe;
 }
-
-export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe }) => {
-  const { user } = useUser();
+export const RecipeDetail: React.FC<RecipeDetailProps> = ({ 
+  recipe: initialRecipe,
+  isGeneratedRecipe = false
+ }) => {
   const router = useRouter();
-  const { isFavorite, addFavorite, removeFavorite } = useFavorites();
-  const [isLiked, setIsLiked] = useState(() => isFavorite(recipe));
-  const [newComment, setNewComment] = useState('');
+  const { user } = useUser();
+  const [recipe, setRecipe] = useState(initialRecipe);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [newComment, setNewComment] = useState('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isFavoriting, setIsFavoriting] = useState(false);
   const MAX_COMMENT_LENGTH = 500;
 
+
+  const [saving, setSaving] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites();
   const {
     comments,
     isLoading: commentsLoading,
@@ -35,21 +59,78 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe }) => {
     unlikeComment
   } = useComments();
 
-  const handleLike = async () => {
+
+  const handleSaveRecipe = async () => {
+    if (!user) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const recipeData = {
+        title: recipe.title,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        cookingTime: recipe.cookingTime,
+        imageUrl: recipe.imageUrl,
+        imageUrlLarge: recipe.imageUrlLarge,
+        category: recipe.category || 'other',
+        tags: recipe.tags || [],
+        dietaryInfo: recipe.dietaryInfo || {},
+      };
+
+      const response = await fetch('/api/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recipeData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save recipe');
+      }
+
+      const { recipe: savedRecipe } = await response.json();
+      router.push(`/recipe/${encodeURIComponent(savedRecipe.title)}/${savedRecipe.cookingTime}`);
+
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save recipe');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFavoriteToggle = async () => {
     if (!user) {
       router.push('/api/auth/login');
       return;
     }
 
+    setIsFavoriting(true);
     try {
-      if (isLiked) {
+      if (isFavorite(recipe)) {
         await removeFavorite(recipe);
       } else {
         await addFavorite(recipe);
       }
-      setIsLiked(!isLiked);
+      
+      // Update recipe state to reflect new favorite count
+      setRecipe(prev => ({
+        ...prev,
+        _count: {
+          ...prev._count,
+          favorites: isFavorite(recipe) ? 
+            (prev._count?.favorites || 1) - 1 : 
+            (prev._count?.favorites || 0) + 1
+        }
+      }));
     } catch (error) {
-      console.error('Failed to toggle like:', error);
+      setError('Failed to update favorite status');
+    } finally {
+      setIsFavoriting(false);
     }
   };
 
@@ -58,32 +139,10 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe }) => {
       await navigator.share({
         title: recipe.title,
         text: `Check out this recipe: ${recipe.title}`,
-        url: createShareUrl(recipe)
+        url: window.location.href
       });
     } catch (error) {
       console.error('Error sharing:', error);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this recipe?')) return;
-
-    try {
-      setIsDeleting(true);
-      const response = await fetch(`/api/recipes/${recipe.id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        router.push('/recipes');
-      } else {
-        throw new Error('Failed to delete recipe');
-      }
-    } catch (error) {
-      console.error('Error deleting recipe:', error);
-      alert('Failed to delete recipe');
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -99,15 +158,51 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe }) => {
     try {
       await addComment(recipe.id, newComment.trim());
       setNewComment('');
+      // Update comment count
+      setRecipe(prev => ({
+        ...prev,
+        _count: {
+          ...prev._count,
+          comments: (prev._count?.comments || 0) + 1
+        }
+      }));
     } catch (error) {
-      console.error('Error adding comment:', error);
+      setError('Failed to add comment');
     }
   };
 
+  const handleEditSuccess = (updatedRecipe: Recipe) => {
+    setRecipe(updatedRecipe);
+    setIsEditModalOpen(false);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="space-y-8">
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="space-y-6">
         {/* Recipe Header */}
+        <div className="flex justify-between items-start">
+          <h1 className="text-3xl font-bold">{recipe.title}</h1>
+
+          {recipe.isOwner && (
+            <div className="flex gap-4">
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="btn-cyber-outline flex items-center gap-2"
+              >
+                <Edit2 size={16} />
+                Edit
+              </button>
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Recipe Info */}
         <div className="flex flex-col md:flex-row gap-8">
           {/* Image Container */}
           <div className="w-full md:w-1/2 lg:w-2/5">
@@ -134,19 +229,20 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe }) => {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={handleLike}
+                    onClick={handleFavoriteToggle}
+                    disabled={isFavoriting}
                     className="btn-cyber-outline p-2"
-                    aria-label={isLiked ? 'Unlike recipe' : 'Like recipe'}
+                    title={isFavorite(recipe) ? 'Remove from favorites' : 'Add to favorites'}
                   >
                     <Heart
                       size={20}
-                      className={isLiked ? 'fill-cyber-primary text-cyber-primary' : ''}
+                      className={isFavorite(recipe) ? 'fill-cyber-primary text-cyber-primary' : ''}
                     />
                   </button>
                   <button
                     onClick={handleShare}
                     className="btn-cyber-outline p-2"
-                    aria-label="Share recipe"
+                    title="Share recipe"
                   >
                     <Share2 size={20} />
                   </button>
@@ -170,34 +266,13 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe }) => {
                       <p className="text-sm text-gray-400">Recipe Author</p>
                     </div>
                   </Link>
-                  
+
                   {user && user.sub !== recipe.authorId && (
                     <FollowButton userId={recipe.authorId} />
                   )}
                 </div>
               )}
             </div>
-
-            {/* Owner Actions */}
-            {recipe.isOwner && (
-              <div className="flex gap-4">
-                <Link
-                  href={`/recipes/${recipe.id}/edit`}
-                  className="btn-cyber-outline flex items-center gap-2"
-                >
-                  <Edit2 size={16} />
-                  Edit Recipe
-                </Link>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="btn-cyber-outline flex items-center gap-2 text-red-500 hover:bg-red-500/10"
-                >
-                  <Trash2 size={16} />
-                  {isDeleting ? 'Deleting...' : 'Delete Recipe'}
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -228,6 +303,56 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe }) => {
             ))}
           </ol>
         </div>
+
+            {/* Save Button Banner for AI-generated recipes */}
+            {(
+            <div className="card-cyber bg-cyber-primary/5 p-4 flex items-center justify-between">
+              <div className="flex-grow">
+                <h3 className="text-lg font-medium text-cyber-primary">
+                  Like this recipe?
+                </h3>
+                <p className="text-gray-400">
+                  Save it to your collection to access it anytime
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleSaveRecipe}
+                  disabled={saving}
+                  className="btn-cyber flex items-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      Save Recipe
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    const recipeData = encodeURIComponent(JSON.stringify({
+                      title: `${recipe.title} (Custom)`,
+                      ingredients: recipe.ingredients,
+                      instructions: recipe.instructions,
+                      cookingTime: recipe.cookingTime,
+                      imageUrl: recipe.imageUrl,
+                    }));
+                    router.push(`/create-recipe?template=${recipeData}`);
+                  }}
+                  className="btn-cyber-outline flex items-center gap-2"
+                >
+                  <PenTool size={16} />
+                  Customize
+                </button>
+              </div>
+            </div>
+          )}
 
         {/* Comments Section */}
         <div className="card-cyber p-6">
@@ -299,6 +424,21 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe }) => {
           )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      <RecipeManagement
+        recipe={recipe}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSuccess={handleEditSuccess}
+      />
+
+      {/* Error Notification */}
+      {error && (
+        <div className="fixed bottom-4 right-4 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
     </div>
   );
-};
+}

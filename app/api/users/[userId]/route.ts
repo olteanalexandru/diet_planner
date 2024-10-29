@@ -33,3 +33,39 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
     return NextResponse.json({ error: 'Error fetching user profile' }, { status: 500 });
   }
 }
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: { userId: string } }
+) {
+  try {
+    const session = await getSession();
+    if (!session?.user || session.user.sub !== params.userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const data = await req.json();
+
+    const updatedUser = await prisma.user.update({
+      where: { id: params.userId },
+      data: {
+        name: data.name,
+        bio: data.bio,
+        location: data.location,
+        website: data.website,
+        specialties: data.specialties || [],
+        dietaryPreferences: data.dietaryPreferences || [],
+        avatar: data.avatar,
+        updatedAt: new Date(),
+      },
+    });
+
+    return NextResponse.json({ user: updatedUser });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return NextResponse.json(
+      { error: 'Failed to update user profile' },
+      { status: 500 }
+    );
+  }
+}

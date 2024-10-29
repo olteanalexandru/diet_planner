@@ -24,17 +24,38 @@ function isValidJSON(str: string) {
   }
 }
 
-
-
 function normalizeTitle(title: string) {
   return decodeURIComponent(title)
-    .replace(/[^a-zA-Z0-9\s]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+
+    .replace(/-/g, ' ')   //replace - with " "
+    .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .trim(); // Remove leading/trailing spaces
+}
+
+// First, define valid activity types
+type ActivityType = 'generated' | 'created' | 'liked' | 'commented' | 'shared';
+
+async function createRecipeActivity(userId: string, recipeId: string, activityType: ActivityType) {
+  try {
+    await prisma.activity.create({
+      data: {
+        type: activityType, // Changed from 'action' to 'type'
+        user: {
+          connect: { id: userId }
+        },
+        recipe: {
+          connect: { id: recipeId }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error creating activity:', error);
+    // Don't throw - we don't want to fail the whole request if activity creation fails
+  }
 }
 
 export async function POST(req: NextRequest) {
-
   const session = await getSession();
   const userId = session?.user?.sub;
 
@@ -50,9 +71,13 @@ export async function POST(req: NextRequest) {
 
   if (!title || !cookingTime) {
     return NextResponse.json({ error: 'Missing title or cookingTime in request body' }, { status: 400 });
+  } else { 
+    console.log("title: ", title + " cookingTime: ", cookingTime + " imageUrl: ", imageUrl);
   }
 
   const normalisedTitle = normalizeTitle(title);
+
+  console.log("normalisedTitle: ", normalisedTitle);
 
   let attempts = 0;
   while (attempts < MAX_RETRIES) {
@@ -169,8 +194,6 @@ export async function POST(req: NextRequest) {
         });
       }
 
-
-
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
@@ -237,14 +260,8 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Create activity only for authenticated users
-      await prisma.activity.create({
-        data: {
-          action: 'generated',
-          user: { connect: { id: user.id } },
-          recipe: { connect: { id: recipe.id } },
-        },
-      });
+      // Create activity with correct type field
+      await createRecipeActivity(user.id, recipe.id, 'generated');
 
       return NextResponse.json({
         recipe: {

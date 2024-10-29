@@ -1,14 +1,30 @@
 
 import { User, Recipe } from './index';
 
+
 export type ActivityType = 
-  | 'recipe_created'
-  | 'recipe_liked'
-  | 'comment_added'
-  | 'started_following'
-  | 'achievement_earned'
-  | 'recipe_milestone'
-  | 'weekly_digest';
+  | 'generated'    // When AI generates a recipe
+  | 'created'      // When user creates a recipe
+  | 'liked'        // When user likes a recipe
+  | 'commented'    // When user comments on a recipe
+  | 'shared'       // When user shares a recipe
+  | 'started_following'  // When user follows another user
+  | 'achievement_earned' // When user earns an achievement
+  | 'recipe_milestone';  // When recipe reaches a milestone
+
+export interface Activity {
+  id: string;
+  type: ActivityType;
+  userId: string;
+  targetUserId?: string;
+  recipeId?: string;
+  milestone?: number;
+  achievementId?: string;
+  createdAt: Date;
+
+}
+
+
 
 
 

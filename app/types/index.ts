@@ -10,6 +10,16 @@ interface Auth0User extends UserProfile {
   name?: string;
 }
 
+export interface User extends PrismaUser {
+ 
+  bio?: string;
+  location?: string;
+  website?: string;
+  specialties: string[];
+  dietaryPreferences: string[];
+  avatar?: string;
+}
+
 // Core Types
 export interface User extends PrismaUser {
   _count?: {
@@ -21,17 +31,7 @@ export interface User extends PrismaUser {
   bio?: string;
 }
 
-// export interface Recipe extends PrismaRecipe {
-//   author?: User;
-//   comments?: Comment[];
-//   isOwner?: boolean;
-//   _count?: {
-//     likes: number;
-//     comments: number;
-//   };
-//   imageUrl?: string | null;
-//   imageUrlLarge?: string | null;
-// }
+
 
 // Context Types
 export interface RecipeContextType {
@@ -279,7 +279,6 @@ export interface FavouriteRecipeComponentProps {
 
 
 export interface Recipe {
-
   id: string;
   title: string;
   ingredients: string[];
@@ -297,18 +296,47 @@ export interface Recipe {
   dietaryInfo?: {
     isVegetarian?: boolean;
     isVegan?: boolean;
+    isGlutenFree?: boolean;
+    isDairyFree?: boolean;
   };
   _count?: {
     likes: number;
     comments: number;
+    favorites: number;
   };
-  
-  favorites?: any[]; // For checking if recipe is favorited
+  isLiked?: boolean;
   isOwner?: boolean;
   viewCount?: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  servings: number;
+  description?: string;
+  cuisine?: string;
+  prepTime?: number;
+  totalTime?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  rating?: number;
+  ratingCount: number;
+  isPublished: boolean;
 }
+
 export interface RecipeCardProps {
   recipe: Recipe;
   onDelete?: (recipeId: string) => void;
   onEdit?: (recipeId: string, updatedRecipe: Recipe) => void;
+}
+
+
+export interface RecipeFeed {
+  recipes: Recipe[];
+  hasMore: boolean;
+  total: number;
+}
+
+export interface RecipeFeedFilters {
+  category: string;
+  sort: string;
+  page: number;
 }
