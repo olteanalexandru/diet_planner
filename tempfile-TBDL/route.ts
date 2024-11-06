@@ -38,73 +38,38 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.user) {
+    if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { title, description, ingredients, instructions, cookingTime, imageUrl, isPublished = true } = await req.json();
+    const { title, ingredients, instructions, cookingTime, imageUrl } = await req.json();
 
     if (!title || !ingredients || !instructions || !cookingTime) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // First, ensure the user exists
-    let user = await prisma.user.findUnique({
-      where: { id: session.user.sub }
-    });
-
-    // If user doesn't exist, create them
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          id: session.user.sub,
-          email: session.user.email || '',
-          name: session.user.name || '',
-        }
-      });
-      console.log('Created new user:', user.id);
-    }
-
-    // Now create the recipe
     const recipe = await prisma.recipe.create({
       data: {
         title,
-        description: description || '',
         ingredients,
         instructions,
         cookingTime: parseInt(cookingTime),
         imageUrl,
-        authorId: user.id,
-        isPublished, // Use isPublished flag instead of status
+        author: { connect: { id: session.user.sub } },
       },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-          }
-        }
-      }
     });
 
-    // Create activity for the new recipe
     await prisma.activity.create({
       data: {
-        type: isPublished ? 'created' : 'draft',
-        userId: user.id,
-        recipeId: recipe.id,
-      }
+        type: "generate",
+        user: { connect: { id: session.user.sub } },
+        recipe: { connect: { id: recipe.id } },
+      },
     });
 
     return NextResponse.json({ recipe }, { status: 201 });
   } catch (error) {
     console.error('Error creating recipe:', error);
-    return NextResponse.json(
-      { 
-        error: 'Error creating recipe',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -11,15 +11,15 @@ model User {
   id                   String                @id
   email                String?               @unique
   name                 String?
-  bio                  String?               
-  location             String?               
-  website              String?               
-  specialties          String[]              
-  dietaryPreferences   String[]              
+  bio                  String?
+  location             String?
+  website              String?
+  specialties          String[]
+  dietaryPreferences   String[]
   subscriptionStatus   String                @default("free")
   createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt  
-  avatar               String?               
+  updatedAt            DateTime              @updatedAt
+  avatar               String?
   recipes              Recipe[]
   favorites            Favorite[]
   followers            Follow[]              @relation("Following")
@@ -39,28 +39,29 @@ model User {
 model Recipe {
   id            String       @id @default(cuid())
   title         String
-  description   String?      
+  description   String?
   ingredients   String[]
   instructions  String[]
   cookingTime   Int
-  servings      Int          @default(4)  
-  difficulty    String       @default("medium") 
+  servings      Int          @default(4)
+  difficulty    String       @default("medium")
   category      String       @default("other")
-  cuisine       String?      
+  cuisine       String?
   tags          String[]     @default([])
   dietaryInfo   Json         @default("{}")
-  prepTime      Int?         
-  totalTime     Int?         
-  calories      Int?         
-  protein       Float?       
-  carbs         Float?       
-  fat           Float?       
-  rating        Float?       
-  ratingCount   Int          @default(0)  
+  prepTime      Int?
+  totalTime     Int?
+  calories      Int?
+  protein       Float?
+  carbs         Float?
+  fat           Float?
+  rating        Float?
+  ratingCount   Int          @default(0)
   imageUrl      String?
   imageUrlLarge String?
   viewCount     Int          @default(0)
-  isPublished   Boolean      @default(true)  
+  isPublished   Boolean      @default(true)
+  status        String       @default("published") // Added status field with default value
   authorId      String
   author        User         @relation(fields: [authorId], references: [id])
   likes         RecipeLike[]
@@ -77,11 +78,12 @@ model Recipe {
   @@index([createdAt])
   @@index([viewCount])
   @@index([rating])
+  @@index([status])
 }
 
 model Activity {
   id            String            @id @default(cuid())
-  type          String           // Should be one of: 'generated', 'created', 'liked', 'commented', 'shared'
+  type          String // Should be one of: 'generated', 'created', 'liked', 'commented', 'shared'
   userId        String
   targetUserId  String?
   recipeId      String?

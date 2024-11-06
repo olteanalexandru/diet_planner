@@ -6,6 +6,54 @@ import { Recipe } from '../types';
 import { RecipeCard } from '../Components/recipes/RecipeCard';
 import Link from 'next/link';
 
+
+
+const RecipesList: React.FC<{ recipes: Recipe[] }> = ({ recipes }) => {
+  const draftRecipes = recipes.filter(recipe => recipe.status === 'draft');
+  const publishedRecipes = recipes.filter(recipe => recipe.status === 'published');
+
+  return (
+    <div className="space-y-8">
+      {draftRecipes.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4 text-cyber-primary">
+            Drafts & Incomplete Recipes
+          </h2>
+          <div className="grid gap-6">
+            {draftRecipes.map(recipe => (
+              <div key={recipe.id} className="card-cyber relative">
+                <div className="absolute top-4 right-4">
+                  <span className="px-3 py-1 rounded-full bg-cyber-primary/10 text-cyber-primary text-sm">
+                    Draft
+                  </span>
+                </div>
+                <RecipeCard recipe={recipe} />
+                <div className="p-4 border-t border-space-700">
+                  <Link
+                    href={`/create-recipe/${recipe.id}`}
+                    className="btn-cyber-outline w-full text-center"
+                  >
+                    Complete Recipe
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Published Recipes</h2>
+        <div className="grid gap-6">
+          {publishedRecipes.map(recipe => (
+            <RecipeCard key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const { user, isLoading } = useUser();
   const [customRecipes, setCustomRecipes] = useState<Recipe[]>([]);
@@ -105,6 +153,9 @@ export default function Dashboard() {
         <p>Followers: {followersCount}</p>
         <p>Following: {followingCount}</p>
       </div>
+      <RecipesList recipes={customRecipes} />
     </div>
+
+   
   );
 }

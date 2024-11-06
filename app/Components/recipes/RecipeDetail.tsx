@@ -2,47 +2,35 @@ import React, { useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
 import { Heart, Clock, Share2, ChefHat, Edit2, Save, Loader2, MessageCircle, PenTool } from 'lucide-react';
-import { Recipe } from '@/app/types';
+import { Recipe, Comment as CommentType } from '../../types';
 import Link from 'next/link';
 import { Comment } from '../Comment';
-import { useFavorites } from '@/app/context/FavoritesContext';
-import { useComments } from '@/app/context/CommentContext';
-import { useRecipes } from '@/app/context/RecipeContext';
-import { createUserUrl, createShareUrl } from '@/app/utils/url';
+import { useFavorites } from '../../context/FavoritesContext';
+import { useComments } from '../../context/CommentContext';
+import { useRecipes } from '../../context/RecipeContext';
+import { createUserUrl, createShareUrl } from '../../utils/url';
 import { FollowButton } from '../FollowButton';
 import { RecipeEditModal } from './RecipeEditModal';
 import { RecipeManagement } from './RecipeManagement';
 
 interface RecipeDetailProps {
   recipe: Recipe;
-  onEdit?: () => void;
-  onDelete?: () => void;
-}
-
-
-interface RecipeDetailProps {
-  recipe: Recipe;
   isGeneratedRecipe?: boolean;
 }
 
-
-interface RecipeDetailProps {
-  recipe: Recipe;
-}
 export const RecipeDetail: React.FC<RecipeDetailProps> = ({ 
   recipe: initialRecipe,
   isGeneratedRecipe = false
  }) => {
   const router = useRouter();
   const { user } = useUser();
-  const [recipe, setRecipe] = useState(initialRecipe);
+  const [recipe, setRecipe] = useState<Recipe>(initialRecipe);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isFavoriting, setIsFavoriting] = useState(false);
   const MAX_COMMENT_LENGTH = 500;
-
 
   const [saving, setSaving] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
@@ -59,6 +47,49 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
     unlikeComment
   } = useComments();
 
+  const handleAddAsDraft = async () => {
+    if (!user) {
+      router.push('/api/auth/login');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const recipeData = {
+        title: recipe.title,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        cookingTime: recipe.cookingTime,
+        imageUrl: recipe.imageUrl,
+        imageUrlLarge: recipe.imageUrlLarge,
+        category: recipe.category || 'other',
+        tags: recipe.tags || [],
+        dietaryInfo: recipe.dietaryInfo || {},
+        status: 'draft'
+      };
+
+      const response = await fetch('/api/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recipeData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save recipe');
+      }
+
+      const { recipe: savedRecipe } = await response.json();
+      router.push('/dashboard');
+
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save recipe');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSaveRecipe = async () => {
     if (!user) {
@@ -80,6 +111,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
         category: recipe.category || 'other',
         tags: recipe.tags || [],
         dietaryInfo: recipe.dietaryInfo || {},
+        status: 'published'
       };
 
       const response = await fetch('/api/recipes', {
@@ -117,8 +149,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
         await addFavorite(recipe);
       }
       
-      // Update recipe state to reflect new favorite count
-      setRecipe(prev => ({
+      setRecipe((prev: Recipe) => ({
         ...prev,
         _count: {
           ...prev._count,
@@ -158,8 +189,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
     try {
       await addComment(recipe.id, newComment.trim());
       setNewComment('');
-      // Update comment count
-      setRecipe(prev => ({
+      setRecipe((prev: Recipe) => ({
         ...prev,
         _count: {
           ...prev._count,
@@ -280,7 +310,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
         <div className="card-cyber p-6">
           <h2 className="text-xl font-semibold mb-4">Ingredients</h2>
           <ul className="space-y-2">
-            {recipe.ingredients.map((ingredient, index) => (
+            {recipe.ingredients.map((ingredient: string, index: number) => (
               <li key={index} className="flex items-center gap-2 text-gray-300">
                 <span className="w-2 h-2 rounded-full bg-cyber-primary/50" />
                 {ingredient}
@@ -293,7 +323,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
         <div className="card-cyber p-6">
           <h2 className="text-xl font-semibold mb-4">Instructions</h2>
           <ol className="space-y-4">
-            {recipe.instructions.map((instruction, index) => (
+            {recipe.instructions.map((instruction: string, index: number) => (
               <li key={index} className="flex gap-4 text-gray-300">
                 <span className="flex-shrink-0 w-8 h-8 rounded-full bg-cyber-primary/10 flex items-center justify-center text-cyber-primary font-medium">
                   {index + 1}
@@ -304,55 +334,47 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
           </ol>
         </div>
 
-            {/* Save Button Banner for AI-generated recipes */}
-            {(
-            <div className="card-cyber bg-cyber-primary/5 p-4 flex items-center justify-between">
-              <div className="flex-grow">
-                <h3 className="text-lg font-medium text-cyber-primary">
-                  Like this recipe?
-                </h3>
-                <p className="text-gray-400">
-                  Save it to your collection to access it anytime
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={handleSaveRecipe}
-                  disabled={saving}
-                  className="btn-cyber flex items-center gap-2"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save size={16} />
-                      Save Recipe
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    const recipeData = encodeURIComponent(JSON.stringify({
-                      title: `${recipe.title} (Custom)`,
-                      ingredients: recipe.ingredients,
-                      instructions: recipe.instructions,
-                      cookingTime: recipe.cookingTime,
-                      imageUrl: recipe.imageUrl,
-                    }));
-                    router.push(`/create-recipe?template=${recipeData}`);
-                  }}
-                  className="btn-cyber-outline flex items-center gap-2"
-                >
-                  <PenTool size={16} />
-                  Customize
-                </button>
-              </div>
+        {/* Save Button Banner for AI-generated recipes */}
+        {isGeneratedRecipe && (
+          <div className="card-cyber bg-cyber-primary/5 p-4 flex items-center justify-between">
+            <div className="flex-grow">
+              <h3 className="text-lg font-medium text-cyber-primary">
+                Like this recipe?
+              </h3>
+              <p className="text-gray-400">
+                Add it to your collection and customize it later
+              </p>
             </div>
-          )}
+            
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleAddAsDraft}
+                disabled={saving}
+                className="btn-cyber flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    Add as Draft
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleSaveRecipe}
+                disabled={saving}
+                className="btn-cyber-outline flex items-center gap-2"
+              >
+                <PenTool size={16} />
+                Save & Complete Now
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Comments Section */}
         <div className="card-cyber p-6">
@@ -399,7 +421,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {comments.map((comment) => (
+                  {comments.map((comment: CommentType) => (
                     <Comment
                       key={comment.id}
                       comment={comment}

@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+        "reset-db": "ts-node scripts/reset-db.ts",
+    "clean-db": "curl -X POST http://localhost:3000/api/ClearDatabase",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -12,7 +14,7 @@
     "@auth0/auth0-react": "^2.2.4",
     "@auth0/nextjs-auth0": "^3.5.0",
     "@preact/signals-react": "^2.2.0",
-    "@prisma/client": "^5.21.1",
+    "@prisma/client": "^5.22.0",
     "ai-digest": "^1.0.7",
     "axios": "^1.7.7",
     "bootstrap": "^5.3.3",

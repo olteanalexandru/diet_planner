@@ -1,16 +1,27 @@
 
-import { User as PrismaUser, Recipe as PrismaRecipe } from '@prisma/client';
 import { ReactNode } from 'react';
 
 import { UserProfile} from '@auth0/nextjs-auth0/client';
+// Removed import for PrismaUser as it does not exist
 
 interface Auth0User extends UserProfile {
   sub: string;
   email?: string;
   name?: string;
 }
+export interface PrismaUser {
+  id: string;
+  name: string;
+  email: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  specialties: string[];
+  dietaryPreferences: string[];
+  avatar?: string;
+}
 
-export interface User extends PrismaUser {
+export interface User {
  
   bio?: string;
   location?: string;
@@ -18,6 +29,7 @@ export interface User extends PrismaUser {
   specialties: string[];
   dietaryPreferences: string[];
   avatar?: string;
+  userId: string;
 }
 
 // Core Types
@@ -299,7 +311,7 @@ export interface Recipe {
     isGlutenFree?: boolean;
     isDairyFree?: boolean;
   };
-  _count?: {
+  _count : {
     likes: number;
     comments: number;
     favorites: number;
@@ -320,6 +332,10 @@ export interface Recipe {
   rating?: number;
   ratingCount: number;
   isPublished: boolean;
+  status?: 'ai_generated' | 'draft' | 'published';
+  originalId?: string; 
+  
+
 }
 
 export interface RecipeCardProps {
