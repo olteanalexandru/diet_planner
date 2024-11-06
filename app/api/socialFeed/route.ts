@@ -1,11 +1,18 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 import { formatRelative } from 'date-fns';
-import { ActivityGroup, SocialActivity } from '../../types/social';
+import { ActivityGroup, SocialActivity, ActivityType } from '../../types/social';
 
-const prisma = new PrismaClient();
+// Create PrismaClient singleton
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+const prisma = globalForPrisma.prisma ?? new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
 const ITEMS_PER_PAGE = 10;
 
 export async function GET(req: NextRequest) {
@@ -25,11 +32,34 @@ export async function GET(req: NextRequest) {
         userId: session.user.sub,
       },
       include: {
-        user: true,
-        targetUser: true,
-        recipe: true,
-        ActivityLike: true,
-        ActivityComment: true,
+        user: {
+          select: {
+            name: true,
+            avatar: true
+          }
+        },
+        targetUser: {
+          select: {
+            name: true
+          }
+        },
+        recipe: {
+          select: {
+            title: true,
+            imageUrl: true
+          }
+        },
+        likes: true,
+        comments: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                avatar: true
+              }
+            }
+          }
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -39,22 +69,25 @@ export async function GET(req: NextRequest) {
     const hasMore = activities.length > ITEMS_PER_PAGE;
     const paginatedActivities = activities.slice(0, ITEMS_PER_PAGE);
 
-    const formattedActivities = paginatedActivities.map(activity => ({
+    const formattedActivities: SocialActivity[] = paginatedActivities.map(activity => ({
       id: activity.id,
-      type: activity.type,
+      type: activity.type as ActivityType,
       userId: activity.userId,
-      userName: activity.user.name || '',
-      targetUserId: activity.targetUserId,
-      targetUserName: activity.targetUser?.name,
-      recipeId: activity.recipeId,
-      recipeTitle: activity.recipe?.title,
-      recipeImage: activity.recipe?.imageUrl,
+      userName: activity.user?.name || '',
+      userImage: activity.user?.avatar || undefined,
+      targetUserId: activity.targetUserId || undefined,
+      targetUserName: activity.targetUser?.name || undefined,
+      recipeId: activity.recipeId || undefined,
+      recipeTitle: activity.recipe?.title || undefined,
+      recipeImage: activity.recipe?.imageUrl || undefined,
+      milestone: activity.milestone || undefined,
+      achievementId: activity.achievementId || undefined,
       timestamp: activity.createdAt,
       interactions: {
-        likes: activity.ActivityLike.length,
-        comments: activity.ActivityComment.length,
-        hasLiked: activity.ActivityLike.some(like => like.userId === session.user.sub),
-      },
+        likes: activity.likes.length,
+        comments: activity.comments.length,
+        hasLiked: activity.likes.some(like => like.userId === session.user.sub),
+      }
     }));
 
     const groupedActivities = groupActivitiesByDate(formattedActivities);
@@ -73,9 +106,15 @@ export async function GET(req: NextRequest) {
 }
 
 function groupActivitiesByDate(activities: SocialActivity[]): ActivityGroup[] {
+  const now = new Date();
   return Object.entries(
     activities.reduce((groups: Record<string, SocialActivity[]>, activity) => {
-      const date = formatRelative(new Date(activity.timestamp), new Date());
+      const date = formatRelative(
+        typeof activity.timestamp === 'string' 
+          ? new Date(activity.timestamp) 
+          : activity.timestamp,
+        now
+      );
       if (!groups[date]) {
         groups[date] = [];
       }
@@ -87,18 +126,3 @@ function groupActivitiesByDate(activities: SocialActivity[]): ActivityGroup[] {
     activities,
   }));
 }
-
-// Helper functions
-function getStartDate(timeframe: string, now: Date): Date | null {
-  switch (timeframe) {
-    case 'today':
-      return startOfDay(now);
-    case 'week':
-      return startOfWeek(now);
-    case 'month':
-      return startOfMonth(now);
-    default:
-      return null;
-  }
-}
-

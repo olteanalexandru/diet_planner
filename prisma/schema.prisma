@@ -231,5 +231,3 @@ model RecipeLike {
 
   @@unique([userId, recipeId])
   @@index([userId])
-  @@index([recipeId])
-}
