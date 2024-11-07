@@ -22,10 +22,10 @@ export async function POST(req: NextRequest) {
 
     // Build orderBy based on sort parameter
     const orderBy: any = sort === 'trending' 
-      ? { viewCount: 'desc' }  // Primary ordering by viewCount for trending
-      : { createdAt: 'desc' }; // Default to latest
+      ? { viewCount: 'desc' }
+      : { createdAt: 'desc' };
 
-    // Fetch recipes with pagination
+    // Fetch recipes with likes count and user's like status
     const [recipes, total] = await prisma.$transaction([
       prisma.recipe.findMany({
         where,
@@ -39,15 +39,19 @@ export async function POST(req: NextRequest) {
               name: true,
             }
           },
-          favorites: session?.user ? {
+          likes: session?.user ? {
             where: {
               userId: session.user.sub
+            },
+            select: {
+              userId: true
             }
           } : false,
           _count: {
             select: {
               comments: true,
               favorites: true,
+              likes: true // Added likes count
             }
           },
         }
@@ -55,17 +59,21 @@ export async function POST(req: NextRequest) {
       prisma.recipe.count({ where })
     ]);
 
-    // Get additional engagement metrics for trending sort
-    let transformedRecipes = recipes.map(recipe => {
+    // Transform recipes to include like status and counts
+    const transformedRecipes = recipes.map(recipe => {
       const engagementScore = sort === 'trending'
         ? (recipe._count.favorites * 2) + recipe._count.comments + recipe.viewCount
         : 0;
 
       return {
         ...recipe,
-        isLiked: recipe.favorites?.length > 0,
+        isLiked: recipe.likes?.length > 0,
+        _count: {
+          ...recipe._count,
+          likes: recipe._count.likes || 0
+        },
+        likes: undefined, // Remove likes array from response
         engagementScore,
-        favorites: undefined, // Remove favorites array from response
       };
     });
 

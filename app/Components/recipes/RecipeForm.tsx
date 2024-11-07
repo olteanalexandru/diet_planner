@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Recipe } from '@/app/types';
+import { Recipe } from '../../types';
 import { Loader2, Plus, X } from 'lucide-react';
 
 interface RecipeFormProps {
@@ -71,9 +71,10 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
     },
     customTags: [] as string[],
     newTag: '',
+    status: initialData?.status || 'published',
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, status: 'draft' | 'published' = 'published') => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -81,6 +82,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
     try {
       const recipeData = {
         ...formData,
+        status,
         tags: [...formData.tags, ...formData.customTags],
         customTags: undefined,
         newTag: undefined,
@@ -113,7 +115,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={(e) => handleSubmit(e, 'published')} className="space-y-6">
       {error && (
         <div className="p-4 bg-red-500/10 border border-red-500 rounded-lg text-red-400">
           {error}
@@ -381,9 +383,10 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
 
       <div className="flex justify-end gap-4 pt-6">
         <button
-          type="submit"
+          type="button"
+          onClick={(e) => handleSubmit(e, 'draft')}
           disabled={loading}
-          className="btn-cyber"
+          className="btn-cyber-outline"
         >
           {loading ? (
             <>
@@ -391,7 +394,21 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
               Saving...
             </>
           ) : (
-            'Save Recipe'
+            'Save as Draft'
+          )}
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="btn-cyber"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Publishing...
+            </>
+          ) : (
+            'Publish Recipe'
           )}
         </button>
       </div>

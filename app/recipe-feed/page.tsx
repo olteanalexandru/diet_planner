@@ -66,24 +66,51 @@ export default function RecipeFeed() {
   };
 
   const handleLike = async (recipeId: string) => {
+    const recipe = recipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+
     try {
       const response = await fetch(`/api/recipes/${recipeId}/like`, {
         method: 'POST',
       });
       
-      if (!response.ok) throw new Error('Failed to like recipe');
+      const data = await response.json();
       
-      setRecipes(prev => prev.map(recipe => 
-        recipe.id === recipeId 
+      if (!response.ok) {
+        if (response.status === 400 && data.error === 'Already liked') {
+          // If already liked, force refresh the like status
+          const statusResponse = await fetch(`/api/recipes/${recipeId}/like/status`);
+          if (statusResponse.ok) {
+            const { isLiked, likes } = await statusResponse.json();
+            setRecipes(prev => prev.map(r => 
+              r.id === recipeId 
+                ? { 
+                    ...r, 
+                    isLiked,
+                    _count: {
+                      ...r._count,
+                      likes
+                    }
+                  }
+                : r
+            ));
+          }
+          return;
+        }
+        throw new Error(data.error || 'Failed to like recipe');
+      }
+      
+      setRecipes(prev => prev.map(r => 
+        r.id === recipeId 
           ? { 
-              ...recipe, 
+              ...r, 
               isLiked: true,
               _count: {
-                ...recipe._count,
-                likes: (recipe._count?.likes || 0) + 1
+                ...r._count,
+                likes: data.likes
               }
             }
-          : recipe
+          : r
       ));
     } catch (error) {
       console.error('Error liking recipe:', error);
@@ -91,24 +118,51 @@ export default function RecipeFeed() {
   };
 
   const handleUnlike = async (recipeId: string) => {
+    const recipe = recipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+
     try {
       const response = await fetch(`/api/recipes/${recipeId}/like`, {
         method: 'DELETE',
       });
       
-      if (!response.ok) throw new Error('Failed to unlike recipe');
+      const data = await response.json();
       
-      setRecipes(prev => prev.map(recipe => 
-        recipe.id === recipeId 
+      if (!response.ok) {
+        if (response.status === 404 && data.error === 'Like not found') {
+          // If like not found, force refresh the like status
+          const statusResponse = await fetch(`/api/recipes/${recipeId}/like/status`);
+          if (statusResponse.ok) {
+            const { isLiked, likes } = await statusResponse.json();
+            setRecipes(prev => prev.map(r => 
+              r.id === recipeId 
+                ? { 
+                    ...r, 
+                    isLiked,
+                    _count: {
+                      ...r._count,
+                      likes
+                    }
+                  }
+                : r
+            ));
+          }
+          return;
+        }
+        throw new Error(data.error || 'Failed to unlike recipe');
+      }
+      
+      setRecipes(prev => prev.map(r => 
+        r.id === recipeId 
           ? { 
-              ...recipe, 
+              ...r, 
               isLiked: false,
               _count: {
-                ...recipe._count,
-                likes: Math.max(0, (recipe._count?.likes || 1) - 1)
+                ...r._count,
+                likes: data.likes
               }
             }
-          : recipe
+          : r
       ));
     } catch (error) {
       console.error('Error unliking recipe:', error);

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, usePathname, useRouter } from 'next/navigation';
@@ -29,13 +28,12 @@ export default function RecipePage() {
         setLoading(true);
         setError(null);
 
-        // Handle the title and cookingTime from URL
         const slugParts = Array.isArray(params.slug) ? params.slug : [params.slug];
         const title = decodeURIComponent(slugParts[0]);
         const cookingTime = slugParts[1];
 
-        // Changed to POST request
-        const response = await fetch('/api/getRecipeDetails', {
+        // First get recipe details to get the ID
+        const recipeResponse = await fetch('/api/getRecipeDetails', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -44,14 +42,27 @@ export default function RecipePage() {
           }),
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
+        if (!recipeResponse.ok) {
+          const errorData = await recipeResponse.json();
           throw new Error(errorData.error || 'Failed to fetch recipe');
         }
 
-        const data = await response.json();
-        setRecipe(data.recipe);
+        const { recipe: fetchedRecipe } = await recipeResponse.json();
 
+        // Then fetch like status using the recipe ID
+        if (user && fetchedRecipe.id) {
+          const likeStatusResponse = await fetch(`/api/recipes/${fetchedRecipe.id}/like/status`);
+          if (likeStatusResponse.ok) {
+            const { isLiked, likes } = await likeStatusResponse.json();
+            fetchedRecipe.isLiked = isLiked;
+            fetchedRecipe._count = {
+              ...fetchedRecipe._count,
+              likes
+            };
+          }
+        }
+
+        setRecipe(fetchedRecipe);
       } catch (error) {
         console.error('Error:', error);
         setError(error instanceof Error ? error.message : 'An error occurred');
@@ -61,7 +72,35 @@ export default function RecipePage() {
     };
 
     fetchRecipe();
-  }, [params?.slug]);
+  }, [params?.slug, user]);
+
+  const handleLike = async () => {
+    if (!user || !recipe) return;
+
+    try {
+      const response = await fetch(`/api/recipes/${recipe.id}/like`, {
+        method: recipe.isLiked ? 'DELETE' : 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update like status');
+      }
+
+      const { likes } = await response.json();
+      
+      setRecipe(prev => prev ? {
+        ...prev,
+        isLiked: !prev.isLiked,
+        _count: {
+          ...prev._count,
+          likes
+        }
+      } : null);
+    } catch (error) {
+      console.error('Error updating like:', error);
+      setError('Failed to update like status');
+    }
+  };
 
   if (loading) {
     return (
@@ -132,6 +171,7 @@ export default function RecipePage() {
       <RecipeDetail 
         recipe={recipe}
         isGeneratedRecipe={!recipe.authorId}
+        onLike={handleLike}  // Make sure this prop is passed
       />
       <div ref={commentsRef} id="comments" className="scroll-mt-20" />
     </>

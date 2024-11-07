@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-        "reset-db": "ts-node scripts/reset-db.ts",
+    "reset-db": "ts-node scripts/reset-db.ts",
     "clean-db": "curl -X POST http://localhost:3000/api/ClearDatabase",
     "dev": "next dev",
     "build": "next build",

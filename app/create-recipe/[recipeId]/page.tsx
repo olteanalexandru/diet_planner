@@ -5,19 +5,16 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import { RecipeForm } from '../../Components/recipes/RecipeForm';
 import { Loader2 } from 'lucide-react';
 import { Recipe } from '../../types';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-
-
 
 export default function EditDraftRecipe() {
     const { recipeId } = useParams();
     const [recipe, setRecipe] = useState<Recipe | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
-    
     
     useEffect(() => {
       const fetchRecipe = async () => {
@@ -44,27 +41,41 @@ export default function EditDraftRecipe() {
         const response = await fetch(`/api/recipes/${recipeId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...data,
-            status: 'published'
-          }),
+          body: JSON.stringify(data),
         });
   
         if (!response.ok) throw new Error('Failed to update recipe');
         
         const { recipe: updatedRecipe } = await response.json();
-        router.push(`/recipe/${updatedRecipe.id}`);
+
+        // Redirect based on status
+        if (data.status === 'draft') {
+          router.push('/dashboard'); // Drafts are shown in dashboard
+        } else {
+          router.push(`/recipe/${encodeURIComponent(updatedRecipe.title)}/${updatedRecipe.cookingTime}`);
+        }
       } catch (error) {
         console.error('Error updating recipe:', error);
       }
     };
   
     if (loading) {
-      return <div>Loading...</div>;
+      return (
+        <div className="flex-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-cyber-primary" />
+        </div>
+      );
     }
   
     if (!recipe) {
-      return <div>Recipe not found</div>;
+      return (
+        <div className="flex-center min-h-[60vh] flex-col gap-4">
+          <div>Recipe not found</div>
+          <Link href="/dashboard" className="btn-cyber">
+            Return to Dashboard
+          </Link>
+        </div>
+      );
     }
   
     return (
@@ -75,7 +86,7 @@ export default function EditDraftRecipe() {
               <div>
                 <h1 className="page-title">Complete Your Recipe</h1>
                 <p className="text-gray-400">
-                  Customize and publish your saved recipe
+                  {recipe.status === 'draft' ? 'Finish your draft recipe' : 'Customize and publish your saved recipe'}
                 </p>
               </div>
               {recipe.originalId && (

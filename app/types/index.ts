@@ -332,7 +332,7 @@ export interface Recipe {
   rating?: number;
   ratingCount: number;
   isPublished: boolean;
-  status?: 'ai_generated' | 'draft' | 'published';
+  status?: 'draft' | 'published' | 'ai_generated';
   originalId?: string; 
   
 

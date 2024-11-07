@@ -13,10 +13,32 @@ export async function GET(req: NextRequest) {
   try {
     const favorites = await prisma.favorite.findMany({
       where: { userId: session.user.sub },
-      include: { recipe: true },
+      include: {
+        recipe: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+              }
+            },
+            _count: {
+              select: {
+                likes: true,
+                comments: true,
+              }
+            }
+          }
+        }
+      }
     });
 
-    return NextResponse.json({ favorites: favorites.map(f => f.recipe) });
+    const formattedFavorites = favorites.map(favorite => ({
+      ...favorite.recipe,
+      isOwner: favorite.recipe.authorId === session.user.sub,
+    }));
+
+    return NextResponse.json({ favorites: formattedFavorites });
   } catch (error) {
     console.error('Error fetching favorites:', error);
     return NextResponse.json({ error: 'Error fetching favorites' }, { status: 500 });

@@ -61,7 +61,7 @@ model Recipe {
   imageUrlLarge String?
   viewCount     Int          @default(0)
   isPublished   Boolean      @default(true)
-  status        String       @default("published") // Added status field with default value
+  status        String       @default("published")
   authorId      String
   author        User         @relation(fields: [authorId], references: [id])
   likes         RecipeLike[]
@@ -231,3 +231,5 @@ model RecipeLike {
 
   @@unique([userId, recipeId])
   @@index([userId])
+  @@index([recipeId])
+}

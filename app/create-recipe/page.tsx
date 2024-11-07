@@ -11,7 +11,6 @@ export default function CreateRecipe() {
   const { user, isLoading } = useUser();
   const router = useRouter();
 
-
   const handleSubmit = async (data: Partial<Recipe>): Promise<void> => {
     const route = '/api/recipes/';
 
@@ -20,23 +19,22 @@ export default function CreateRecipe() {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        ...data,
-        status: 'draft',
-      }),
+      body: JSON.stringify(data), // Use the status from the form data
     });
 
     if (!response.ok) {
       throw new Error('Failed to create recipe');
     }
 
-    if (response.ok) {
-      const { recipe } = await response.json();
-      router.push(`/recipe/${recipe.id}`);
+    const { recipe } = await response.json();
+    
+    // Redirect based on status
+    if (recipe.status === 'draft') {
+      router.push('/dashboard'); // Drafts are shown in dashboard
+    } else {
+      router.push(`/recipe/${encodeURIComponent(recipe.title)}/${recipe.cookingTime}`);
     }
   };
-
-
 
   if (isLoading) {
     return (
@@ -67,10 +65,7 @@ export default function CreateRecipe() {
           </div>
           
           <div className="card-cyber p-8">
-          <RecipeForm
-            
-                onSubmit={handleSubmit}
-              />
+            <RecipeForm onSubmit={handleSubmit} />
           </div>
         </div>
       </div>

@@ -1,0 +1,39 @@
+Like/Unlike Persistence:
+
+Description: Users can like and unlike recipes, but after refreshing the page, the like count resets to 0.
+
+Affected File: app/recipe/[...slug]/page.tsx
+
+Current Status: Like functionality needs proper implementation to ensure likes persist after page refresh.
+
+Comments Persistence:
+
+Description: Comments disappear after refreshing the page.
+
+Affected File: app/recipe/[...slug]/page.tsx
+
+Current Status: Comments functionality needs to be fixed so that comments persist after page refresh.
+
+Trending Tags:
+
+Description: Trending tags are not implemented properly and may not display the correct trending tags.
+
+Current Status: Needs proper implementation to accurately display trending tags.
+
+Edit Recipe Functionality:
+
+Description: The edit recipe feature is missing several fields required for complete recipe editing.
+
+Current Status: Additional fields need to be added and integrated into the edit recipe functionality.
+
+Categories Filtering:
+
+Description: Category filtering is not working correctly, preventing users from filtering recipes by category.
+
+Current Status: Needs implementation or fixing to allow proper category-based filtering.
+
+Social Feed Display:
+
+Description: The social feed displays activities as blank, providing no information to the users.
+
+Current Status: Social feed functionality needs to be reviewed and fixed to display activity content correctly.

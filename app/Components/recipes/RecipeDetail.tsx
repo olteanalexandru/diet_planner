@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { Heart, Clock, Share2, ChefHat, Edit2, Save, Loader2, MessageCircle, PenTool } from 'lucide-react';
+import { Heart, Clock, Share2, ChefHat, Edit2, Save, Loader2, MessageCircle, PenTool, Bookmark } from 'lucide-react';
 import { Recipe, Comment as CommentType } from '../../types';
 import Link from 'next/link';
 import { Comment } from '../Comment';
@@ -16,11 +16,13 @@ import { RecipeManagement } from './RecipeManagement';
 interface RecipeDetailProps {
   recipe: Recipe;
   isGeneratedRecipe?: boolean;
+  onLike?: () => Promise<void>;  // Add this prop
 }
 
 export const RecipeDetail: React.FC<RecipeDetailProps> = ({ 
   recipe: initialRecipe,
-  isGeneratedRecipe = false
+  isGeneratedRecipe = false,
+  onLike  // Add this prop
  }) => {
   const router = useRouter();
   const { user } = useUser();
@@ -165,6 +167,52 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
     }
   };
 
+  const handleLikeClick = async () => {
+    if (!user) {
+      router.push('/api/auth/login');
+      return;
+    }
+  
+    try {
+      if (!recipe.id) return;
+  
+      const response = await fetch(`/api/recipes/${recipe.id}/like`, {
+        method: recipe.isLiked ? 'DELETE' : 'POST',
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        if (response.status === 400 && data.error === 'Already liked') {
+          // Handle already liked case by forcing a refresh of like status
+          const statusResponse = await fetch(`/api/recipes/${recipe.id}/like/status`);
+          if (statusResponse.ok) {
+            const { isLiked, likes } = await statusResponse.json();
+            setRecipe(prev => ({
+              ...prev,
+              isLiked,
+              _count: { ...prev._count, likes }
+            }));
+          }
+          return;
+        }
+        throw new Error(data.error || 'Failed to update like status');
+      }
+  
+      setRecipe(prev => ({
+        ...prev,
+        isLiked: !prev.isLiked,
+        _count: {
+          ...prev._count,
+          likes: data.likes
+        }
+      }));
+    } catch (error) {
+      console.error('Error updating like:', error);
+      setError('Failed to update like status');
+    }
+  };
+
   const handleShare = async () => {
     try {
       await navigator.share({
@@ -259,12 +307,25 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
 
                 <div className="flex gap-2">
                   <button
+                    onClick={handleLikeClick}
+                    className={`btn-cyber-outline p-2 flex items-center gap-2 ${
+                      recipe.isLiked ? 'text-cyber-primary' : ''
+                    }`}
+                    title={recipe.isLiked ? 'Unlike' : 'Like'}
+                  >
+                    <Heart
+                      size={20}
+                      className={recipe.isLiked ? 'fill-current' : ''}
+                    />
+                    <span>{recipe._count?.likes || 0}</span>
+                  </button>
+                  <button
                     onClick={handleFavoriteToggle}
                     disabled={isFavoriting}
                     className="btn-cyber-outline p-2"
                     title={isFavorite(recipe) ? 'Remove from favorites' : 'Add to favorites'}
                   >
-                    <Heart
+                    <Bookmark
                       size={20}
                       className={isFavorite(recipe) ? 'fill-cyber-primary text-cyber-primary' : ''}
                     />

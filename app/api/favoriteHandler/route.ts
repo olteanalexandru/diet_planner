@@ -1,18 +1,19 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient } from '@prisma/client';
+import { NextResponse } from 'next/server';
+import PrismaClient from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 
 const prisma = new PrismaClient();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession(req, res);
-  if (!session) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const { title, ingredients, instructions, cookingTime, imageUrl } = req.body;
-
+export async function POST(request: Request) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { title, ingredients, instructions, cookingTime, imageUrl } = body;
+
     const recipe = await prisma.recipe.create({
       data: {
         title,
@@ -24,9 +25,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
 
-    res.status(201).json({ recipe });
+    return NextResponse.json({ recipe }, { status: 201 });
   } catch (error) {
     console.error('Error creating recipe:', error);
-    res.status(500).json({ error: 'Error creating recipe' });
+    return NextResponse.json({ error: 'Error creating recipe' }, { status: 500 });
   }
 }

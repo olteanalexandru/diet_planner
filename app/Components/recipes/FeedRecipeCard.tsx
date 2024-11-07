@@ -22,12 +22,14 @@ export const FeedRecipeCard: React.FC<FeedRecipeCardProps> = ({
 
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     if (!user) {
       router.push('/api/auth/login');
       return;
     }
 
-    if (isLikeLoading) return;
+    if (isLikeLoading || !recipe.id) return;
 
     setIsLikeLoading(true);
     try {
@@ -44,11 +46,11 @@ export const FeedRecipeCard: React.FC<FeedRecipeCardProps> = ({
   };
 
   return (
-    <Link 
-      href={`/recipe/${encodeURIComponent(recipe.title)}/${recipe.cookingTime}`}
-      className="card-cyber group hover:border-cyber-primary/50 transition-all duration-200"
-    >
-      <div className="p-4">
+    <div className="card-cyber group hover:border-cyber-primary/50 transition-all duration-200">
+      <Link 
+        href={`/recipe/${encodeURIComponent(recipe.title)}/${recipe.cookingTime}`}
+        className="block p-4"
+      >
         {/* Card Content */}
         <div className="flex flex-col md:flex-row gap-4">
           {/* Image */}
@@ -85,9 +87,10 @@ export const FeedRecipeCard: React.FC<FeedRecipeCardProps> = ({
             <div className="flex items-center gap-4 mt-4 text-gray-400">
               <button
                 onClick={handleLikeClick}
+                disabled={isLikeLoading}
                 className={`flex items-center gap-2 transition-colors ${
-                  recipe.isLiked ? 'text-cyber-primary' : 'hover:text-cyber-primary'
-                }`}
+                  isLikeLoading ? 'opacity-50 cursor-not-allowed' : ''
+                } ${recipe.isLiked ? 'text-cyber-primary' : 'hover:text-cyber-primary'}`}
               >
                 <Heart 
                   size={20} 
@@ -118,7 +121,7 @@ export const FeedRecipeCard: React.FC<FeedRecipeCardProps> = ({
             </div>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 };
