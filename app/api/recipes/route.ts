@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
+import axios from 'axios';
 
+const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 const prisma = new PrismaClient();
 
 export async function GET(req: NextRequest) {
@@ -60,12 +62,32 @@ export async function POST(req: NextRequest) {
       protein,
       carbs,
       fat,
-      imageUrl,
       status = 'published',
     } = await req.json();
 
     if (!title || !ingredients || !instructions || !cookingTime) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Fetch image from Pexels API
+    let imageUrl = '';
+    let imageUrlLarge = '';
+    try {
+      const response = await axios.get(`https://api.pexels.com/v1/search`, {
+        params: {
+          query: title,
+          per_page: 1,
+        },
+        headers: {
+          Authorization: PEXELS_API_KEY,
+        },
+      });
+
+      imageUrl = response.data.photos[0]?.src?.small || '';
+      imageUrlLarge = response.data.photos[0]?.src?.large || '';
+    } catch (error) {
+      console.error('Error fetching image from Pexels:', error);
+      // Continue without image if fetch fails
     }
 
     // First, ensure the user exists
@@ -85,7 +107,7 @@ export async function POST(req: NextRequest) {
       console.log('Created new user:', user.id);
     }
 
-    // Now create the recipe with all fields
+    // Now create the recipe with all fields including the image URLs
     const recipe = await prisma.recipe.create({
       data: {
         title,
@@ -106,6 +128,7 @@ export async function POST(req: NextRequest) {
         carbs: carbs ? parseFloat(carbs) : null,
         fat: fat ? parseFloat(fat) : null,
         imageUrl,
+        imageUrlLarge,
         authorId: user.id,
         status,
         isPublished: status === 'published',
