@@ -29,6 +29,7 @@ export default function RecipeFeed() {
   const [trendingTags, setTrendingTags] = useState<{ tag: string; count: number }[]>([]);
   const { ref, inView } = useInView();
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
 
   // Scroll to top visibility
   useEffect(() => {
@@ -47,7 +48,12 @@ export default function RecipeFeed() {
       const response = await fetch('/api/recipes/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, sort, page: currentPage }),
+        body: JSON.stringify({ 
+          category, 
+          sort, 
+          page: currentPage,
+          tag: tagFilter // Add tag filter
+        }),
       });
 
       if (!response.ok) throw new Error('Failed to fetch recipes');
@@ -200,6 +206,12 @@ export default function RecipeFeed() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleTagClick = (tag: string) => {
+    setTagFilter(prev => prev === tag ? null : tag);
+    setPage(1);
+    fetchRecipes(true);
+  };
+
   return (
     <div className="min-h-screen">
       {/* Fixed Header */}
@@ -278,7 +290,12 @@ export default function RecipeFeed() {
                 {trendingTags.map(({ tag, count }) => (
                   <button
                     key={tag}
-                    className="px-3 py-1 rounded-full bg-space-700 hover:bg-space-600 transition-colors"
+                    onClick={() => handleTagClick(tag)}
+                    className={`px-3 py-1 rounded-full transition-colors ${
+                      tagFilter === tag 
+                        ? 'bg-cyber-primary text-space-900' 
+                        : 'bg-space-700 hover:bg-space-600'
+                    }`}
                   >
                     #{tag}
                     <span className="ml-2 text-xs text-gray-400">

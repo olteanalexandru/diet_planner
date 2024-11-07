@@ -1,63 +1,59 @@
-
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    // Get recipes from the last 7 days
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    // Get all recipes from the last 30 days with their tags
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const recipes = await prisma.recipe.findMany({
       where: {
         createdAt: {
-          gte: oneWeekAgo
+          gte: thirtyDaysAgo
         }
       },
       select: {
         tags: true,
-        favorites: {
+        viewCount: true,
+        _count: {
           select: {
-            createdAt: true
-          }
-        },
-        comments: {
-          select: {
-            createdAt: true
+            likes: true,
+            comments: true
           }
         }
       }
     });
 
-    // Calculate tag popularity based on recipe engagement
-    const tagScores = new Map<string, number>();
+    // Calculate tag frequency and engagement
+    const tagStats = new Map<string, { count: number; engagement: number }>();
 
     recipes.forEach(recipe => {
-      const engagementScore = 
-        recipe.favorites.length * 2 + // Likes worth 2 points
-        recipe.comments.length * 3;   // Comments worth 3 points
-
+      const engagement = recipe.viewCount + (recipe._count.likes * 2) + (recipe._count.comments * 3);
+      
       recipe.tags.forEach(tag => {
-        const currentScore = tagScores.get(tag) || 0;
-        tagScores.set(tag, currentScore + engagementScore + 1); // +1 for base tag usage
+        const current = tagStats.get(tag) || { count: 0, engagement: 0 };
+        tagStats.set(tag, {
+          count: current.count + 1,
+          engagement: current.engagement + engagement
+        });
       });
     });
 
-    // Convert to array and sort by score
-    const trendingTags = Array.from(tagScores.entries())
-      .map(([tag, score]) => ({
+    // Convert to array and sort by engagement
+    const trendingTags = Array.from(tagStats.entries())
+      .map(([tag, stats]) => ({
         tag,
-        score,
-        count: recipes.filter(r => r.tags.includes(tag)).length
+        count: stats.count,
+        engagement: stats.engagement
       }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10)
-      .map(({ tag, count }) => ({ tag, count }));
+      .sort((a, b) => b.engagement - a.engagement)
+      .slice(0, 10) // Get top 10 tags
+      .map(({ tag, count }) => ({ tag, count })); // Remove engagement from response
 
     return NextResponse.json({ tags: trendingTags });
-
   } catch (error) {
     console.error('Error fetching trending tags:', error);
     return NextResponse.json(

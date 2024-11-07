@@ -42,7 +42,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { title, description, ingredients, instructions, cookingTime, imageUrl, isPublished = true } = await req.json();
+    const { 
+      title, 
+      description,
+      ingredients, 
+      instructions, 
+      cookingTime,
+      prepTime,
+      totalTime,
+      servings,
+      difficulty,
+      category,
+      cuisine,
+      tags,
+      dietaryInfo,
+      calories,
+      protein,
+      carbs,
+      fat,
+      imageUrl,
+      status = 'published',
+    } = await req.json();
 
     if (!title || !ingredients || !instructions || !cookingTime) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -65,7 +85,7 @@ export async function POST(req: NextRequest) {
       console.log('Created new user:', user.id);
     }
 
-    // Now create the recipe
+    // Now create the recipe with all fields
     const recipe = await prisma.recipe.create({
       data: {
         title,
@@ -73,9 +93,22 @@ export async function POST(req: NextRequest) {
         ingredients,
         instructions,
         cookingTime: parseInt(cookingTime),
+        prepTime: prepTime ? parseInt(prepTime) : null,
+        totalTime: totalTime ? parseInt(totalTime) : null,
+        servings: parseInt(servings),
+        difficulty,
+        category,
+        cuisine,
+        tags,
+        dietaryInfo,
+        calories: calories ? parseInt(calories) : null,
+        protein: protein ? parseFloat(protein) : null,
+        carbs: carbs ? parseFloat(carbs) : null,
+        fat: fat ? parseFloat(fat) : null,
         imageUrl,
         authorId: user.id,
-        isPublished, // Use isPublished flag instead of status
+        status,
+        isPublished: status === 'published',
       },
       include: {
         author: {
@@ -90,7 +123,7 @@ export async function POST(req: NextRequest) {
     // Create activity for the new recipe
     await prisma.activity.create({
       data: {
-        type: isPublished ? 'created' : 'draft',
+        type: status === 'published' ? 'created' : 'draft',
         userId: user.id,
         recipeId: recipe.id,
       }

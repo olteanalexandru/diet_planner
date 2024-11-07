@@ -72,6 +72,13 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
     customTags: [] as string[],
     newTag: '',
     status: initialData?.status || 'published',
+    description: initialData?.description || '',
+    prepTime: initialData?.prepTime || 15,
+    totalTime: initialData?.totalTime || 45,
+    calories: initialData?.calories || null,
+    protein: initialData?.protein || null,
+    carbs: initialData?.carbs || null,
+    fat: initialData?.fat || null,
   });
 
   const handleSubmit = async (e: React.FormEvent, status: 'draft' | 'published' = 'published') => {
@@ -80,10 +87,31 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
     setError(null);
 
     try {
+      // Create dietary info from tags
+      const dietaryInfo = {
+        isVegetarian: formData.tags.includes('Vegetarian'),
+        isVegan: formData.tags.includes('Vegan'),
+        isGlutenFree: formData.tags.includes('Gluten-Free'),
+        isDairyFree: formData.tags.includes('Dairy-Free'),
+      };
+
+      // Extract cuisine type from tags
+      const cuisineTag = formData.tags.find(tag => CUISINE_TAGS.includes(tag));
+
       const recipeData = {
         ...formData,
         status,
-        tags: [...formData.tags, ...formData.customTags],
+        // Ensure category is one of the valid categories
+        category: CATEGORIES.map(c => c.id).includes(formData.category) 
+          ? formData.category 
+          : 'other',
+        // Combine custom tags and selected tags
+        tags: [...new Set([...formData.tags, ...formData.customTags])],
+        // Add dietary info
+        dietaryInfo,
+        // Add cuisine if found
+        cuisine: cuisineTag || null,
+        // Remove form-specific fields
         customTags: undefined,
         newTag: undefined,
       };
@@ -133,6 +161,17 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
         />
       </div>
 
+      <div>
+        <label className="block text-sm font-medium mb-2">Description</label>
+        <textarea
+          value={formData.description}
+          onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          className="input-cyber w-full"
+          rows={3}
+          placeholder="Brief description of your recipe..."
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-2">Cooking Time (minutes)</label>
@@ -165,6 +204,34 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
         </div>
 
         <div>
+          <label className="block text-sm font-medium mb-2">Prep Time (minutes)</label>
+          <input
+            type="number"
+            value={formData.prepTime}
+            onChange={e => setFormData(prev => ({ 
+              ...prev, 
+              prepTime: Math.max(0, parseInt(e.target.value) || 0)
+            }))}
+            className="input-cyber w-full"
+            min="0"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Total Time (minutes)</label>
+          <input
+            type="number"
+            value={formData.totalTime}
+            onChange={e => setFormData(prev => ({ 
+              ...prev, 
+              totalTime: Math.max(0, parseInt(e.target.value) || 0)
+            }))}
+            className="input-cyber w-full"
+            min="0"
+          />
+        </div>
+
+        <div>
           <label className="block text-sm font-medium mb-2">Difficulty</label>
           <select
             value={formData.difficulty}
@@ -178,6 +245,71 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Calories</label>
+          <input
+            type="number"
+            value={formData.calories || ''}
+            onChange={e => setFormData(prev => ({ 
+              ...prev, 
+              calories: e.target.value ? parseInt(e.target.value) : null
+            }))}
+            className="input-cyber w-full"
+            min="0"
+            placeholder="Optional"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Protein (g)</label>
+          <input
+            type="number"
+            value={formData.protein || ''}
+            onChange={e => setFormData(prev => ({ 
+              ...prev, 
+              protein: e.target.value ? parseFloat(e.target.value) : null
+            }))}
+            className="input-cyber w-full"
+            min="0"
+            step="0.1"
+            placeholder="Optional"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Carbs (g)</label>
+          <input
+            type="number"
+            value={formData.carbs || ''}
+            onChange={e => setFormData(prev => ({ 
+              ...prev, 
+              carbs: e.target.value ? parseFloat(e.target.value) : null
+            }))}
+            className="input-cyber w-full"
+            min="0"
+            step="0.1"
+            placeholder="Optional"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Fat (g)</label>
+          <input
+            type="number"
+            value={formData.fat || ''}
+            onChange={e => setFormData(prev => ({ 
+              ...prev, 
+              fat: e.target.value ? parseFloat(e.target.value) : null
+            }))}
+            className="input-cyber w-full"
+            min="0"
+            step="0.1"
+            placeholder="Optional"
+          />
         </div>
       </div>
 

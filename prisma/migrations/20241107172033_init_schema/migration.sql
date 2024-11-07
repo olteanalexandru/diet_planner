@@ -3,8 +3,15 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "email" TEXT,
     "name" TEXT,
+    "bio" TEXT,
+    "location" TEXT,
+    "website" TEXT,
+    "specialties" TEXT[],
+    "dietaryPreferences" TEXT[],
     "subscriptionStatus" TEXT NOT NULL DEFAULT 'free',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "avatar" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -13,18 +20,32 @@ CREATE TABLE "User" (
 CREATE TABLE "Recipe" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
+    "description" TEXT,
     "ingredients" TEXT[],
     "instructions" TEXT[],
     "cookingTime" INTEGER NOT NULL,
-    "imageUrl" TEXT,
-    "imageUrlLarge" TEXT,
-    "category" TEXT NOT NULL DEFAULT 'all',
+    "servings" INTEGER NOT NULL DEFAULT 4,
+    "difficulty" TEXT NOT NULL DEFAULT 'medium',
+    "category" TEXT NOT NULL DEFAULT 'other',
+    "cuisine" TEXT,
     "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "dietaryInfo" JSONB NOT NULL DEFAULT '{}',
+    "prepTime" INTEGER,
+    "totalTime" INTEGER,
+    "calories" INTEGER,
+    "protein" DOUBLE PRECISION,
+    "carbs" DOUBLE PRECISION,
+    "fat" DOUBLE PRECISION,
+    "rating" DOUBLE PRECISION,
+    "ratingCount" INTEGER NOT NULL DEFAULT 0,
+    "imageUrl" TEXT,
+    "imageUrlLarge" TEXT,
     "viewCount" INTEGER NOT NULL DEFAULT 0,
+    "isPublished" BOOLEAN NOT NULL DEFAULT true,
     "authorId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'published',
 
     CONSTRAINT "Recipe_pkey" PRIMARY KEY ("id")
 );
@@ -140,6 +161,16 @@ CREATE TABLE "MealPlan" (
     CONSTRAINT "MealPlan_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "RecipeLike" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "recipeId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "RecipeLike_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -150,10 +181,19 @@ CREATE INDEX "Recipe_authorId_idx" ON "Recipe"("authorId");
 CREATE INDEX "Recipe_category_idx" ON "Recipe"("category");
 
 -- CreateIndex
+CREATE INDEX "Recipe_difficulty_idx" ON "Recipe"("difficulty");
+
+-- CreateIndex
 CREATE INDEX "Recipe_createdAt_idx" ON "Recipe"("createdAt");
 
 -- CreateIndex
 CREATE INDEX "Recipe_viewCount_idx" ON "Recipe"("viewCount");
+
+-- CreateIndex
+CREATE INDEX "Recipe_rating_idx" ON "Recipe"("rating");
+
+-- CreateIndex
+CREATE INDEX "Recipe_status_idx" ON "Recipe"("status");
 
 -- CreateIndex
 CREATE INDEX "Activity_userId_idx" ON "Activity"("userId");
@@ -230,56 +270,65 @@ CREATE INDEX "MealPlan_userId_idx" ON "MealPlan"("userId");
 -- CreateIndex
 CREATE INDEX "MealPlan_recipeId_idx" ON "MealPlan"("recipeId");
 
+-- CreateIndex
+CREATE INDEX "RecipeLike_userId_idx" ON "RecipeLike"("userId");
+
+-- CreateIndex
+CREATE INDEX "RecipeLike_recipeId_idx" ON "RecipeLike"("recipeId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RecipeLike_userId_recipeId_key" ON "RecipeLike"("userId", "recipeId");
+
 -- AddForeignKey
 ALTER TABLE "Recipe" ADD CONSTRAINT "Recipe_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Activity" ADD CONSTRAINT "Activity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Activity" ADD CONSTRAINT "Activity_targetUserId_fkey" FOREIGN KEY ("targetUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Activity" ADD CONSTRAINT "Activity_recipeId_fkey" FOREIGN KEY ("recipeId") REFERENCES "Recipe"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ActivityLike" ADD CONSTRAINT "ActivityLike_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Activity" ADD CONSTRAINT "Activity_targetUserId_fkey" FOREIGN KEY ("targetUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Activity" ADD CONSTRAINT "Activity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ActivityLike" ADD CONSTRAINT "ActivityLike_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "Activity"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ActivityComment" ADD CONSTRAINT "ActivityComment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ActivityLike" ADD CONSTRAINT "ActivityLike_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ActivityComment" ADD CONSTRAINT "ActivityComment_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "Activity"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ActivityCommentLike" ADD CONSTRAINT "ActivityCommentLike_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ActivityComment" ADD CONSTRAINT "ActivityComment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ActivityCommentLike" ADD CONSTRAINT "ActivityCommentLike_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES "ActivityComment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Achievement" ADD CONSTRAINT "Achievement_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ActivityCommentLike" ADD CONSTRAINT "ActivityCommentLike_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Comment" ADD CONSTRAINT "Comment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Achievement" ADD CONSTRAINT "Achievement_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Comment" ADD CONSTRAINT "Comment_recipeId_fkey" FOREIGN KEY ("recipeId") REFERENCES "Recipe"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CommentLike" ADD CONSTRAINT "CommentLike_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Comment" ADD CONSTRAINT "Comment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "CommentLike" ADD CONSTRAINT "CommentLike_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES "Comment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "CommentLike" ADD CONSTRAINT "CommentLike_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_recipeId_fkey" FOREIGN KEY ("recipeId") REFERENCES "Recipe"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Follow" ADD CONSTRAINT "Follow_followerId_fkey" FOREIGN KEY ("followerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -288,7 +337,13 @@ ALTER TABLE "Follow" ADD CONSTRAINT "Follow_followerId_fkey" FOREIGN KEY ("follo
 ALTER TABLE "Follow" ADD CONSTRAINT "Follow_followingId_fkey" FOREIGN KEY ("followingId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "MealPlan" ADD CONSTRAINT "MealPlan_recipeId_fkey" FOREIGN KEY ("recipeId") REFERENCES "Recipe"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "MealPlan" ADD CONSTRAINT "MealPlan_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MealPlan" ADD CONSTRAINT "MealPlan_recipeId_fkey" FOREIGN KEY ("recipeId") REFERENCES "Recipe"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "RecipeLike" ADD CONSTRAINT "RecipeLike_recipeId_fkey" FOREIGN KEY ("recipeId") REFERENCES "Recipe"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RecipeLike" ADD CONSTRAINT "RecipeLike_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

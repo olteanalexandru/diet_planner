@@ -8,12 +8,17 @@ const ITEMS_PER_PAGE = 10;
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    const { category = 'all', sort = 'trending', page = 1 } = await req.json();
+    const { category = 'all', sort = 'trending', page = 1, tag = null } = await req.json();
 
     // Build where clause
     let where: any = {};
     if (category !== 'all') {
       where.category = category;
+    }
+    if (tag) {
+      where.tags = {
+        has: tag
+      };
     }
 
     // Calculate trending score based on recent activity
