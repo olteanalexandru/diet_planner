@@ -52,7 +52,7 @@ export default function RecipeFeed() {
           category, 
           sort, 
           page: currentPage,
-          tag: tagFilter // Add tag filter
+          tag: tagFilter 
         }),
       });
 
