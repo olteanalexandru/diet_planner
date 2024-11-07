@@ -17,11 +17,13 @@ export default function RecipePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const commentsRef = useRef<HTMLDivElement>(null);
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(true);
 
   const isEditMode = pathname.endsWith('/edit');
 
   useEffect(() => {
-    const fetchRecipe = async () => {
+    const fetchRecipeAndComments = async () => {
       if (!params?.slug) return;
 
       try {
@@ -62,16 +64,31 @@ export default function RecipePage() {
           }
         }
 
+        // Fetch comments
+        const commentsResponse = await fetch(`/api/comments?recipeId=${fetchedRecipe.id}`);
+        if (!commentsResponse.ok) {
+          throw new Error('Failed to fetch comments');
+        }
+        const { comments } = await commentsResponse.json();
+        
+        // Update recipe with actual comment count
+        fetchedRecipe._count = {
+          ...fetchedRecipe._count,
+          comments: comments.length
+        };
+
         setRecipe(fetchedRecipe);
+        setComments(comments);
       } catch (error) {
         console.error('Error:', error);
         setError(error instanceof Error ? error.message : 'An error occurred');
       } finally {
         setLoading(false);
+        setCommentsLoading(false);
       }
     };
 
-    fetchRecipe();
+    fetchRecipeAndComments();
   }, [params?.slug, user]);
 
   const handleLike = async () => {
@@ -171,7 +188,10 @@ export default function RecipePage() {
       <RecipeDetail 
         recipe={recipe}
         isGeneratedRecipe={!recipe.authorId}
-        onLike={handleLike}  // Make sure this prop is passed
+        onLike={handleLike}
+        comments={comments}
+        setComments={setComments}
+        commentsLoading={commentsLoading}
       />
       <div ref={commentsRef} id="comments" className="scroll-mt-20" />
     </>

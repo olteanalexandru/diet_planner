@@ -6,8 +6,6 @@ import { Recipe, Comment as CommentType } from '../../types';
 import Link from 'next/link';
 import { Comment } from '../Comment';
 import { useFavorites } from '../../context/FavoritesContext';
-import { useComments } from '../../context/CommentContext';
-import { useRecipes } from '../../context/RecipeContext';
 import { createUserUrl, createShareUrl } from '../../utils/url';
 import { FollowButton } from '../FollowButton';
 import { RecipeEditModal } from './RecipeEditModal';
@@ -16,14 +14,20 @@ import { RecipeManagement } from './RecipeManagement';
 interface RecipeDetailProps {
   recipe: Recipe;
   isGeneratedRecipe?: boolean;
-  onLike?: () => Promise<void>;  // Add this prop
+  onLike?: () => Promise<void>;
+  comments: any[];
+  setComments: (comments: any[]) => void;
+  commentsLoading: boolean;
 }
 
 export const RecipeDetail: React.FC<RecipeDetailProps> = ({ 
   recipe: initialRecipe,
   isGeneratedRecipe = false,
-  onLike  // Add this prop
- }) => {
+  onLike,
+  comments,
+  setComments,
+  commentsLoading
+}) => {
   const router = useRouter();
   const { user } = useUser();
   const [recipe, setRecipe] = useState<Recipe>(initialRecipe);
@@ -38,16 +42,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
-  const {
-    comments,
-    isLoading: commentsLoading,
-    error: commentsError,
-    addComment,
-    editComment,
-    deleteComment,
-    likeComment,
-    unlikeComment
-  } = useComments();
 
   const handleAddAsDraft = async () => {
     if (!user) {
@@ -227,17 +221,26 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      router.push('/api/auth/login');
-      return;
-    }
-
-    if (!newComment.trim()) return;
+    if (!user || !newComment.trim()) return;
 
     try {
-      await addComment(recipe.id, newComment.trim());
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipeId: recipe.id,
+          content: newComment.trim()
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to add comment');
+      
+      const { comment } = await response.json();
+      setComments([comment, ...comments]);
       setNewComment('');
-      setRecipe((prev: Recipe) => ({
+      
+      // Update recipe comment count
+      setRecipe(prev => ({
         ...prev,
         _count: {
           ...prev._count,
@@ -476,20 +479,48 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                 <div className="text-center py-4 text-gray-400">
                   Loading comments...
                 </div>
-              ) : commentsError ? (
-                <div className="text-center py-4 text-red-400">
-                  {commentsError}
-                </div>
               ) : (
                 <div className="space-y-4">
-                  {comments.map((comment: CommentType) => (
+                  {comments.map((comment) => (
                     <Comment
                       key={comment.id}
                       comment={comment}
-                      onDelete={deleteComment}
-                      onEdit={editComment}
-                      onLike={likeComment}
-                      onUnlike={unlikeComment}
+                      onDelete={async (commentId) => {
+                        // Delete logic
+                        const response = await fetch(`/api/comments/${commentId}`, {
+                          method: 'DELETE'
+                        });
+                        if (response.ok) {
+                          setComments(comments.filter(c => c.id !== commentId));
+                          setRecipe(prev => ({
+                            ...prev,
+                            _count: {
+                              ...prev._count,
+                              comments: (prev._count?.comments || 1) - 1
+                            }
+                          }));
+                        }
+                      }}
+                      onEdit={async (commentId, content) => {
+                        // Edit logic
+                        const response = await fetch(`/api/comments/${commentId}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ content }),
+                        });
+                        if (response.ok) {
+                          const { comment: updatedComment } = await response.json();
+                          setComments(comments.map(c => 
+                            c.id === commentId ? updatedComment : c
+                          ));
+                        }
+                      }}
+                      onLike={async (commentId) => {
+                        // Like logic
+                      }}
+                      onUnlike={async (commentId) => {
+                        // Unlike logic
+                      }}
                     />
                   ))}
                 </div>
