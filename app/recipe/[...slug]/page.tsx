@@ -155,44 +155,14 @@ export default function RecipePage() {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">Edit Recipe</h1>
           <RecipeForm 
-            initialData={{
-              ...recipe,
-              // Add all the new fields from the recipe
-              description: recipe.description || '',
-              prepTime: recipe.prepTime || null,
-              totalTime: recipe.totalTime || null,
-              calories: recipe.calories || null,
-              protein: recipe.protein || null,
-              carbs: recipe.carbs || null,
-              fat: recipe.fat || null,
-              // Keep existing fields
-              ingredients: recipe.ingredients,
-              instructions: recipe.instructions,
-              cookingTime: recipe.cookingTime,
-              servings: recipe.servings,
-              difficulty: recipe.difficulty,
-              category: recipe.category,
-              cuisine: recipe.cuisine,
-              tags: recipe.tags,
-              dietaryInfo: recipe.dietaryInfo,
-              status: recipe.status,
-            }} 
+            initialData={recipe} 
             mode="edit"
             onSubmit={async (updatedRecipe) => {
               try {
                 const response = await fetch(`/api/recipes/${recipe.id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    ...updatedRecipe,
-                    // Ensure numeric fields are properly typed
-                    prepTime: updatedRecipe.prepTime ? parseInt(String(updatedRecipe.prepTime)) : null,
-                    totalTime: updatedRecipe.totalTime ? parseInt(String(updatedRecipe.totalTime)) : null,
-                    calories: updatedRecipe.calories ? parseInt(String(updatedRecipe.calories)) : null,
-                    protein: updatedRecipe.protein ? parseFloat(String(updatedRecipe.protein)) : null,
-                    carbs: updatedRecipe.carbs ? parseFloat(String(updatedRecipe.carbs)) : null,
-                    fat: updatedRecipe.fat ? parseFloat(String(updatedRecipe.fat)) : null,
-                  }),
+                  body: JSON.stringify(updatedRecipe),
                 });
                 
                 if (!response.ok) {

@@ -1,6 +1,4 @@
-
 import { User, Recipe } from './index';
-
 
 export type ActivityType = 
   | 'generated'    // When AI generates a recipe
@@ -21,12 +19,7 @@ export interface Activity {
   milestone?: number;
   achievementId?: string;
   createdAt: Date;
-
 }
-
-
-
-
 
 export interface SocialActivity {
   id: string;
@@ -90,10 +83,10 @@ export interface SocialContextType {
   likeActivity: (activityId: string) => Promise<void>;
   unlikeActivity: (activityId: string) => Promise<void>;
   addComment: (activityId: string, content: string) => Promise<void>;
+  shareActivity: (recipeId: string) => Promise<void>;
 }
 
-// Component Props Types
-interface ActivityCardProps {
+export interface ActivityCardProps {
   activity: SocialActivity;
   onLike?: (activityId: string) => Promise<void>;
   onComment?: (activityId: string, content: string) => Promise<void>;
@@ -126,7 +119,6 @@ export interface AchievementModalProps {
   onClose: () => void;
 }
 
-// API Response Types
 export interface SocialFeedResponse {
   activities: ActivityGroup[];
   hasMore: boolean;
@@ -145,7 +137,6 @@ export interface ActivityLikeResponse {
   likes: number;
 }
 
-// Achievement Types
 export interface Achievement {
   id: string;
   title: string;
@@ -162,7 +153,6 @@ export interface AchievementCriteria {
   current: number;
 }
 
-// Social Feed State Types
 export interface SocialFeedState {
   activities: ActivityGroup[];
   filters: ActivityFilter;
@@ -172,7 +162,6 @@ export interface SocialFeedState {
   error: string | null;
 }
 
-// Social Feed Event Handlers
 export interface SocialEventHandlers {
   onLike: (activityId: string) => Promise<void>;
   onComment: (activityId: string, content: string) => Promise<void>;
@@ -181,21 +170,18 @@ export interface SocialEventHandlers {
   onRecipeClick: (recipeId: string) => void;
 }
 
-// Social Feed Filter Types
 export interface FilterOptions {
   timeframe: TimeFrame;
   activityTypes: ActivityType[];
   following: boolean;
 }
 
-// Trending Topics Types
 export interface TrendingTopic {
   tag: string;
   count: number;
   trending?: boolean;
 }
 
-// Social Metrics Types
 export interface UserMetrics {
   posts: number;
   followers: number;

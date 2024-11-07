@@ -4,6 +4,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { Heart, MessageCircle, Share2, Award, ChefHat, Users } from 'lucide-react';
 import { SocialActivity } from '../../types/social';
 import { useSocialFeed } from '../../context/SocialFeedContext';
+import { ActivityComments } from './ActivityComments';
+import { ShareModal } from './ShareModal';
 
 interface ActivityCardProps {
   activity: SocialActivity;
@@ -11,8 +13,9 @@ interface ActivityCardProps {
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
   const [isCommenting, setIsCommenting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [comment, setComment] = useState('');
-  const { likeActivity, unlikeActivity, addComment } = useSocialFeed();
+  const { likeActivity, unlikeActivity, addComment, shareActivity } = useSocialFeed();
 
   const handleLikeToggle = async () => {
     try {
@@ -39,9 +42,15 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
     }
   };
 
+  const handleShare = async () => {
+    if (activity.recipeId) {
+      setIsSharing(true);
+    }
+  };
+
   const renderActivityContent = () => {
     switch (activity.type) {
-      case 'recipe_created':
+      case 'created':
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -103,7 +112,97 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
           </div>
         );
 
-      // Add more cases for other activity types...
+      case 'shared':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-cyber-primary" />
+              <Link href={`/profile/${activity.userId}`} className="font-medium hover:text-cyber-primary">
+                {activity.userName}
+              </Link>
+              <span>shared a recipe:</span>
+            </div>
+            {activity.recipeId && (
+              <Link 
+                href={`/recipe/${activity.recipeId}`}
+                className="block relative rounded-lg overflow-hidden hover:scale-[1.02] transition-transform duration-200"
+              >
+                <img
+                  src={activity.recipeImage || '/placeholder-recipe.jpg'}
+                  alt={activity.recipeTitle}
+                  className="w-full h-48 object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 p-4">
+                  <h3 className="text-xl font-semibold text-white">{activity.recipeTitle}</h3>
+                </div>
+              </Link>
+            )}
+          </div>
+        );
+
+      case 'liked':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Heart className="w-5 h-5 text-cyber-primary fill-current" />
+              <Link href={`/profile/${activity.userId}`} className="font-medium hover:text-cyber-primary">
+                {activity.userName}
+              </Link>
+              <span>liked a recipe:</span>
+            </div>
+            {activity.recipeId && (
+              <Link 
+                href={`/recipe/${activity.recipeId}`}
+                className="block relative rounded-lg overflow-hidden hover:scale-[1.02] transition-transform duration-200"
+              >
+                <img
+                  src={activity.recipeImage || '/placeholder-recipe.jpg'}
+                  alt={activity.recipeTitle}
+                  className="w-full h-48 object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 p-4">
+                  <h3 className="text-xl font-semibold text-white">{activity.recipeTitle}</h3>
+                </div>
+              </Link>
+            )}
+          </div>
+        );
+
+      case 'commented':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-cyber-primary" />
+              <Link href={`/profile/${activity.userId}`} className="font-medium hover:text-cyber-primary">
+                {activity.userName}
+              </Link>
+              <span>commented on a recipe:</span>
+            </div>
+            {activity.commentContent && (
+              <div className="bg-space-800 p-4 rounded-lg">
+                <p className="text-gray-300">{activity.commentContent}</p>
+              </div>
+            )}
+            {activity.recipeId && (
+              <Link 
+                href={`/recipe/${activity.recipeId}`}
+                className="block relative rounded-lg overflow-hidden hover:scale-[1.02] transition-transform duration-200"
+              >
+                <img
+                  src={activity.recipeImage || '/placeholder-recipe.jpg'}
+                  alt={activity.recipeTitle}
+                  className="w-full h-48 object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 p-4">
+                  <h3 className="text-xl font-semibold text-white">{activity.recipeTitle}</h3>
+                </div>
+              </Link>
+            )}
+          </div>
+        );
       
       default:
         return null;
@@ -123,8 +222,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
               className="flex items-center gap-2 text-gray-400 hover:text-cyber-primary transition-colors"
             >
               <Heart
-                className={activity.interactions.hasLiked ? 'fill-current text-cyber-primary' : ''}
-                size={20}
+                className={`w-5 h-5 ${activity.interactions.hasLiked ? 'fill-current text-cyber-primary' : ''}`}
               />
               <span>{activity.interactions.likes}</span>
             </button>
@@ -132,12 +230,17 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
               onClick={() => setIsCommenting(!isCommenting)}
               className="flex items-center gap-2 text-gray-400 hover:text-cyber-primary transition-colors"
             >
-              <MessageCircle size={20} />
+              <MessageCircle className="w-5 h-5" />
               <span>{activity.interactions.comments}</span>
             </button>
-            <button className="flex items-center gap-2 text-gray-400 hover:text-cyber-primary transition-colors">
-              <Share2 size={20} />
-            </button>
+            {activity.recipeId && (
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-2 text-gray-400 hover:text-cyber-primary transition-colors"
+              >
+                <Share2 className="w-5 h-5" />
+              </button>
+            )}
           </div>
           <div className="text-sm text-gray-400">
             {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
@@ -148,7 +251,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
         {isCommenting && (
           <form onSubmit={handleCommentSubmit} className="space-y-2">
             <textarea
-              className="form-textarea w-full"
+              className="form-textarea w-full bg-space-800 border border-space-700 rounded-lg p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-cyber-primary focus:border-transparent"
               placeholder="Write a comment..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
@@ -162,11 +265,24 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
               >
                 Cancel
               </button>
-              <button type="submit" className="btn-cyber">
+              <button
+                type="submit"
+                className="btn-cyber"
+                disabled={!comment.trim()}
+              >
                 Comment
               </button>
             </div>
           </form>
+        )}
+
+        {/* Share Modal */}
+        {isSharing && activity.recipeId && (
+          <ShareModal
+            activityId={activity.id}
+            recipeTitle={activity.recipeTitle}
+            onClose={() => setIsSharing(false)}
+          />
         )}
       </div>
     </div>
