@@ -1,4 +1,4 @@
-import { User, ApiResponse, UserResponse } from '../types';
+import { User, ApiResponse, UserResponse } from '../types/';
 
 const BASE_URL = '/api/users';
 

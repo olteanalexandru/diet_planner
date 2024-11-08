@@ -23,7 +23,10 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
   const [activities, setActivities] = useState<ActivityGroup[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<ActivityFilter>({});
+  const [filters, setFilters] = useState<ActivityFilter>({
+    category: 'all',
+    sortBy: 'trending'
+  });
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -34,25 +37,21 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
     setError(null);
 
     try {
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        ...(filters.type && { type: filters.type.join(',') }),
-        ...(filters.timeframe && { timeframe: filters.timeframe }),
-        ...(filters.userId && { userId: filters.userId }),
-        ...(filters.following !== undefined && { following: filters.following.toString() })
-      });
+      const response = await socialFeedService.getFeed(page, 10, filters);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
 
-      const response = await fetch(`/api/socialFeed?${queryParams}`);
-      if (!response.ok) throw new Error('Failed to fetch activities');
-      
-      const data = await response.json() as SocialFeedResponse;
-      
-      setActivities((prev: ActivityGroup[]) => page === 1 ? data.activities : [...prev, ...data.activities]);
-      setHasMore(data.hasMore);
-      setCurrentPage(page);
+      if (response.data) {
+        setActivities(prev => 
+          page === 1 ? response.data.activities : [...prev, ...response.data.activities]
+        );
+        setHasMore(response.data.hasMore);
+        setCurrentPage(page);
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
-      setHasMore(false);
     } finally {
       setIsLoading(false);
     }
@@ -150,8 +149,8 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
     }
   }, [fetchActivities]);
 
-  const handleSetFilters = useCallback((newFilters: ActivityFilter) => {
-    setFilters(newFilters);
+  const handleSetFilters = useCallback((newFilters: Partial<ActivityFilter>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
     setActivities([]);
     setHasMore(true);
     setCurrentPage(1);

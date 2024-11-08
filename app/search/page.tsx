@@ -95,7 +95,7 @@ export default function SearchRecipePage() {
 
   const handleFilterChange = (
     key: keyof SearchFilters,
-    value: string | string[]
+    value: string | string[] | number
   ) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
   };

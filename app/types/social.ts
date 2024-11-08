@@ -1,14 +1,16 @@
 import { User, Recipe } from './index';
 
 export type ActivityType = 
-  | 'generated'    // When AI generates a recipe
-  | 'created'      // When user creates a recipe
-  | 'liked'        // When user likes a recipe
-  | 'commented'    // When user comments on a recipe
-  | 'shared'       // When user shares a recipe
-  | 'started_following'  // When user follows another user
-  | 'achievement_earned' // When user earns an achievement
-  | 'recipe_milestone';  // When recipe reaches a milestone
+  | 'generated'    
+  | 'created'     
+  | 'liked'       
+  | 'commented'    
+  | 'shared'       
+  | 'started_following'  
+  | 'achievement_earned'
+  | 'recipe_liked'
+  | 'recipe_created' 
+  | 'recipe_milestone';  
 
 export interface Activity {
   id: string;
@@ -37,6 +39,7 @@ export interface SocialActivity {
   commentContent?: string;
   timestamp: string | Date;
   interactions: ActivityInteractions;
+  
 }
 
 export interface ActivityInteractions {
@@ -76,10 +79,10 @@ export interface SocialContextType {
   activities: ActivityGroup[];
   isLoading: boolean;
   error: string | null;
-  filters: ActivityFilter;
+  filters: SocialFeedFilters;
   hasMore: boolean;
   fetchActivities: (page?: number) => Promise<void>;
-  setFilters: (filters: ActivityFilter) => void;
+  setFilters: (filters: Partial<SocialFeedFilters>) => void;
   likeActivity: (activityId: string) => Promise<void>;
   unlikeActivity: (activityId: string) => Promise<void>;
   addComment: (activityId: string, content: string) => Promise<void>;
@@ -194,4 +197,57 @@ export interface ActivityMetrics {
   comments: number;
   shares: number;
   reach: number;
+}
+
+export interface SocialFeedFilters {
+  category: string;
+  sortBy: 'trending' | 'latest';
+  timeFrame?: TimeFrame;
+}
+
+export interface ActivityQueryWhere {
+  userId: string;
+  type?: ActivityType;
+  createdAt?: {
+    gte: Date;
+  };
+}
+
+export interface ActivityOrderBy {
+  likes?: {
+    _count: 'desc' | 'asc';
+  };
+  comments?: {
+    _count: 'desc' | 'asc';
+  };
+  createdAt?: 'desc' | 'asc';
+}
+
+export interface DBActivity {
+  id: string;
+  type: ActivityType;
+  userId: string;
+  targetUserId?: string | null;
+  recipeId?: string | null;
+  milestone?: number | null;
+  achievementId?: string | null;
+  createdAt: Date;
+  user?: {
+    name: string | null;
+    avatar: string | null;
+  } | null;
+  targetUser?: {
+    name: string | null;
+  } | null;
+  recipe?: {
+    title: string | null;
+    imageUrl: string | null;
+  } | null;
+  likes: Array<{ userId: string }>;
+  comments: Array<{
+    user: {
+      name: string | null;
+      avatar: string | null;
+    } | null;
+  }>;
 }

@@ -1,4 +1,4 @@
-import { ApiResponse } from '../types';
+import { ApiResponse } from '../types/';
 import { API_ENDPOINTS } from '../utils/constants';
 
 export interface SocialActivity {
@@ -42,11 +42,25 @@ interface SocialFeedResponse {
   hasMore: boolean;
 }
 
+interface SocialFeedFilters {
+  category: string;
+  sortBy: string;
+  timeFrame?: string;
+}
+
 export const socialFeedService = {
-  async getFeed(page = 1, limit = 10): Promise<ApiResponse<SocialFeedResponse>> {
+  async getFeed(page = 1, limit = 10, filters: SocialFeedFilters): Promise<ApiResponse<SocialFeedResponse>> {
     try {
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        category: filters.category,
+        sortBy: filters.sortBy,
+        ...(filters.timeFrame && { timeFrame: filters.timeFrame })
+      });
+
       const response = await fetch(
-        `${API_ENDPOINTS.SOCIAL_FEED}?page=${page}&limit=${limit}`
+        `${API_ENDPOINTS.SOCIAL_FEED}?${queryParams}`
       );
       const data = await response.json();
       return { data, status: response.status };

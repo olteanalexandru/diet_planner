@@ -1,15 +1,14 @@
-
 import { ReactNode } from 'react';
+import { UserProfile } from '@auth0/nextjs-auth0/client';
 
-import { UserProfile} from '@auth0/nextjs-auth0/client';
-// Removed import for PrismaUser as it does not exist
-
+// User Types
 interface Auth0User extends UserProfile {
   sub: string;
   email?: string;
   name?: string;
 }
-export interface PrismaUser {
+
+export interface User {
   id: string;
   name: string;
   email: string;
@@ -19,31 +18,55 @@ export interface PrismaUser {
   specialties: string[];
   dietaryPreferences: string[];
   avatar?: string;
-}
-
-export interface User {
- 
-  bio?: string;
-  location?: string;
-  website?: string;
-  specialties: string[];
-  dietaryPreferences: string[];
-  avatar?: string;
-  userId: string;
-}
-
-// Core Types
-export interface User extends PrismaUser {
   _count?: {
     recipes: number;
     followers: number;
     following: number;
   };
   isFollowing?: boolean;
-  bio?: string;
 }
 
+// Recipe Types
+export interface RecipeCount {
+  likes: number;
+  comments: number;
+  favorites: number;
+}
 
+export interface Recipe {
+  id: string;
+  title: string;
+  description?: string;
+  ingredients: string[];
+  instructions: string[];
+  cookingTime: number;
+  servings: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  category: string;
+  cuisine?: string;
+  tags: string[];
+  dietaryInfo: Record<string, boolean>;
+  prepTime?: number;
+  totalTime?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  rating?: number;
+  ratingCount: number;
+  imageUrl?: string | null;
+  imageUrlLarge?: string | null;
+  viewCount: number;
+  isPublished: boolean;
+  authorId: string;
+  author?: User;
+  createdAt: string;
+  updatedAt: string;
+  status: 'draft' | 'published' | 'ai_generated';
+  _count: RecipeCount;
+  isLiked?: boolean;
+  isOwner?: boolean;
+}
 
 // Context Types
 export interface RecipeContextType {
@@ -51,69 +74,12 @@ export interface RecipeContextType {
   loading: boolean;
   error: string | null;
   fetchRecipes: (query: string) => Promise<void>;
-  fetchRecipeDetails: (title: string, cookingTime: string) => Promise<Recipe | null>;
-}
-
-export interface FavoritesContextType {
-  favorites: Recipe[];
-  addFavorite: (recipe: Recipe) => Promise<void>;
-  removeFavorite: (recipe: Recipe) => Promise<void>;
-  isFavorite: (recipe: Recipe) => boolean;
-}
-
-export interface CommentContextType {
-  comments: Comment[];
-  isLoading: boolean;
-  error: string | null;
-  fetchComments: (recipeId: string) => Promise<void>;
-  addComment: (recipeId: string, content: string) => Promise<void>;
-  editComment: (commentId: string, content: string) => Promise<void>;
-  deleteComment: (commentId: string) => Promise<void>;
-  likeComment: (commentId: string) => Promise<void>;
-  unlikeComment: (commentId: string) => Promise<void>;
-}
-
-// Component Props Types
-export interface RecipeCardProps {
-  recipe: Recipe;
-}
-
-export interface CommentProps {
-  comment: Comment;
-  onDelete: (commentId: string) => Promise<void>;
-  onEdit: (commentId: string, content: string) => Promise<void>;
-  onLike: (commentId: string) => Promise<void>;
-  onUnlike: (commentId: string) => Promise<void>;
-}
-
-export interface ProfileHeaderProps {
-  profile: User;
-  recipeCount: number;
-  followersCount: number;
-  followingCount: number;
-  isFollowing: boolean;
-  onFollowToggle: () => void;
-}
-
-export interface FollowButtonProps {
-  userId: string;
-  isFollowing?: boolean;
-  onToggle?: (isFollowing: boolean) => void;
-}
-
-export interface UserRecipesProps {
-  recipes: Recipe[];
-}
-
-export interface UserStatsProps {
-  icon: ReactNode;
-  label: string;
-  value: number;
-}
-
-export interface UserFollowStatsProps {
-  followersCount: number;
-  followingCount: number;
+  fetchRecipeDetails: (title: string, cookingTime: number) => Promise<Recipe | null>;
+  createRecipe: (recipeData: Partial<Recipe>) => Promise<Recipe | null>;
+  updateRecipe: (id: string, recipeData: Partial<Recipe>) => Promise<Recipe | null>;
+  deleteRecipe: (id: string) => Promise<boolean>;
+  likeRecipe: (id: string) => Promise<void>;
+  unlikeRecipe: (id: string) => Promise<void>;
 }
 
 // API Response Types
@@ -124,54 +90,13 @@ export interface ApiResponse<T> {
   status: number;
 }
 
-export interface RecipeResponse {
-  recipe: Recipe;
-}
-
 export interface RecipesResponse {
   recipes: Recipe[];
   hasMore?: boolean;
 }
 
-export interface CommentResponse {
-  comment: Comment;
-}
-
-export interface CommentsResponse {
-  comments: Comment[];
-  hasMore?: boolean;
-}
-
-export interface UserResponse {
-  user: User;
-}
-
-export interface FavoriteResponse {
-  favorite: {
-    id: string;
-    userId: string;
-    recipeId: string;
-    createdAt: string;
-  };
-}
-
-export interface FollowResponse {
-  isFollowing: boolean;
-  followersCount?: number;
-  followingCount?: number;
-}
-
-// Form Types
-export interface RecipeFormData {
-  title: string;
-  ingredients: string[];
-  instructions: string[];
-  cookingTime: number;
-  imageUrl?: string | null;
-}
-
-export interface CommentFormData {
-  content: string;
+export interface LikeResponse {
+  likeCount: number;
 }
 
 // Search and Filter Types
@@ -192,83 +117,7 @@ export interface FilterOptions {
   author?: string;
 }
 
-// State Types
-export interface PaginationState {
-  page: number;
-  hasMore: boolean;
-  isLoading: boolean;
-}
-
-export interface LoadingState {
-  isLoading: boolean;
-  error: string | null;
-}
-
-// Event Handler Types
-export interface RecipeEventHandlers {
-  onEdit?: (recipeId: string) => void;
-  onDelete?: (recipeId: string) => void;
-  onFavorite?: (recipe: Recipe) => void;
-  onShare?: (recipe: Recipe) => void;
-}
-
-export interface CommentEventHandlers {
-  onSubmit: (content: string) => Promise<void>;
-  onEdit: (commentId: string, content: string) => Promise<void>;
-  onDelete: (commentId: string) => Promise<void>;
-  onLike: (commentId: string) => Promise<void>;
-}
-
-// Additional Social Types
-export interface UserProfileStats {
-  recipesCount: number;
-  followersCount: number;
-  followingCount: number;
-  joinedDate: string;
-}
-
-export interface NotificationTypes {
-  type: 'like' | 'comment' | 'follow' | 'achievement';
-  message: string;
-  timestamp: string;
-  isRead: boolean;
-  actionUrl?: string;
-}
-
-export interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  unlockedAt: Date;
-  progress?: number;
-  requirements?: string[];
-}
-
-// Error Types
-export interface ApiError {
-  message: string;
-  code: string;
-  statusCode: number;
-}
-
-// Utility Types
-export type RecipeId = string;
-export type UserId = string;
-export type CommentId = string;
-
-export interface DateRange {
-  startDate: Date;
-  endDate: Date;
-}
-
-export interface Pagination {
-  page: number;
-  limit: number;
-  total: number;
-  hasMore: boolean;
-}
-
+// Comment Types
 export interface Comment {
   id: string;
   content: string;
@@ -283,68 +132,34 @@ export interface Comment {
   isLiked: boolean;
 }
 
-export interface FavouriteRecipeComponentProps {
-  recipe: Recipe;
-  favorites: Recipe[];
-  setFavorites: (favorites: Recipe[]) => void;
-}
-
-
-export interface Recipe {
-  id: string;
-  title: string;
-  ingredients: string[];
-  instructions: string[];
-  cookingTime: number;
-  imageUrl?: string | null;
-  imageUrlLarge?: string | null;
-  authorId: string;
-  author?: User;
-  comments?: Comment[];
-  createdAt: string;
-  updatedAt: string;
-  category?: string;
-  tags?: string[];
-  dietaryInfo?: {
-    isVegetarian?: boolean;
-    isVegan?: boolean;
-    isGlutenFree?: boolean;
-    isDairyFree?: boolean;
-  };
-  _count : {
-    likes: number;
-    comments: number;
-    favorites: number;
-  };
-  isLiked?: boolean;
-  isOwner?: boolean;
-  viewCount?: number;
-  difficulty: 'easy' | 'medium' | 'hard';
-  servings: number;
-  description?: string;
-  cuisine?: string;
-  prepTime?: number;
-  totalTime?: number;
-  calories?: number;
-  protein?: number;
-  carbs?: number;
-  fat?: number;
-  rating?: number;
-  ratingCount: number;
-  isPublished: boolean;
-  status?: 'draft' | 'published' | 'ai_generated';
-  originalId?: string; 
-  
-
-}
-
+// Component Props Types
 export interface RecipeCardProps {
   recipe: Recipe;
   onDelete?: (recipeId: string) => void;
   onEdit?: (recipeId: string, updatedRecipe: Recipe) => void;
 }
 
+export interface CommentProps {
+  comment: Comment;
+  onDelete: (commentId: string) => Promise<void>;
+  onEdit: (commentId: string, content: string) => Promise<void>;
+  onLike: (commentId: string) => Promise<void>;
+  onUnlike: (commentId: string) => Promise<void>;
+}
 
+// State Types
+export interface PaginationState {
+  page: number;
+  hasMore: boolean;
+  isLoading: boolean;
+}
+
+export interface LoadingState {
+  isLoading: boolean;
+  error: string | null;
+}
+
+// Feed Types
 export interface RecipeFeed {
   recipes: Recipe[];
   hasMore: boolean;
@@ -355,4 +170,12 @@ export interface RecipeFeedFilters {
   category: string;
   sort: string;
   page: number;
+}
+
+
+export interface CommentResponse {
+  id: string;
+  content: string;
+  author: string;
+  createdAt: Date;
 }

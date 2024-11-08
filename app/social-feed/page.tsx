@@ -1,7 +1,7 @@
 'use client'
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { Filter, Users, TrendingUp, ChefHat, Flame, Loader2 } from 'lucide-react';
+import { Filter, Users, TrendingUp, ChefHat, Flame, Loader2, Clock } from 'lucide-react';
 import { ActivityCard } from '../Components/social/ActivityCard';
 import { SuggestedUsers } from '../Components/social/SuggestedUsers';
 import { TrendingTopics } from '../Components/social/TrendingTopics';
@@ -27,6 +27,10 @@ const SocialFeed = () => {
     setFilters
   } = useSocialFeed();
 
+  // State for category and sort options
+  const [category, setCategory] = useState<string>('all');
+  const [sort, setSort] = useState<string>('trending');
+
   // Activity type options with icons and labels
   const activityTypes: Array<{ value: ActivityType; label: string; icon: React.ReactNode }> = [
     { value: 'recipe_created', label: 'Recipes', icon: <ChefHat size={16} /> },
@@ -45,7 +49,7 @@ const SocialFeed = () => {
   // Reset page when filters change
   useEffect(() => {
     fetchActivities(1);
-  }, [filters]);
+  }, [filters, category, sort]);
 
   // Handle infinite scroll
   useEffect(() => {
@@ -64,19 +68,58 @@ const SocialFeed = () => {
     handleScroll();
   }, [inView, hasMore, activities.length, isLoading]);
 
-  const handleFilterChange = useCallback((key: keyof ActivityFilter, value: any) => {
-    setFilters(prevFilters => ({
-      ...prevFilters,
-      [key]: value
-    }));
-  }, [setFilters]);
-
   return (
     <div className="page-container">
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Filters Sidebar */}
         <aside className="lg:w-64 space-y-6">
-          {/* ... rest of the filter sidebar code ... */}
+          <div className="card-cyber p-4">
+            <h2 className="text-lg font-semibold mb-4">Categories</h2>
+            <div className="space-y-1">
+              {activityTypes.map(type => (
+                <button
+                  key={type.value}
+                  onClick={() => setCategory(type.value)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                    category === type.value 
+                      ? 'bg-cyber-primary text-space-900' 
+                      : 'hover:bg-space-700'
+                  }`}
+                >
+                  {type.icon}
+                  <span>{type.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="card-cyber p-4">
+            <h2 className="text-lg font-semibold mb-4">Sort By</h2>
+            <div className="space-y-1">
+              <button
+                onClick={() => setSort('trending')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                  sort === 'trending' 
+                    ? 'bg-cyber-primary text-space-900' 
+                    : 'hover:bg-space-700'
+                }`}
+              >
+                <TrendingUp size={16} />
+                Trending
+              </button>
+              <button
+                onClick={() => setSort('latest')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                  sort === 'latest' 
+                    ? 'bg-cyber-primary text-space-900' 
+                    : 'hover:bg-space-700'
+                }`}
+              >
+                <Clock size={16} />
+                Latest
+              </button>
+            </div>
+          </div>
         </aside>
 
         {/* Main Feed */}

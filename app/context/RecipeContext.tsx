@@ -1,32 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Recipe } from '@/app/types';
-
-interface RecipeContextType {
-  recipes: Recipe[];
-  loading: boolean;
-  error: string | null;
-  filters: {
-    category?: string;
-    difficulty?: string;
-    cuisine?: string;
-    dietaryPreferences?: string[];
-    tags?: string[];
-  };
-  setFilters: (filters: any) => void;
-  fetchRecipes: (options?: { 
-    category?: string;
-    page?: number;
-    limit?: number;
-  }) => Promise<void>;
-  fetchRecipeById: (id: string) => Promise<Recipe | null>;
-  createRecipe: (data: Partial<Recipe>) => Promise<Recipe>;
-  updateRecipe: (id: string, data: Partial<Recipe>) => Promise<Recipe>;
-  deleteRecipe: (id: string) => Promise<void>;
-  likeRecipe: (id: string) => Promise<void>;
-  unlikeRecipe: (id: string) => Promise<void>;
-  clearError: () => void;
-}
+import type { Recipe, RecipeContextType, SearchParams,  RecipeCount } from '../types/';
+import { recipeService } from '../services/recipeService';
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
 
@@ -34,209 +9,198 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState({});
 
-  const clearError = () => setError(null);
-
-  const fetchRecipes = useCallback(async (options = {}) => {
+  const fetchRecipes = useCallback(async (query: string) => {
     setLoading(true);
     setError(null);
     try {
-      const queryParams = new URLSearchParams({
-        ...options,
-        ...filters,
-      });
+      const searchParams: SearchParams = {
+        query,
+        page: 1,
+        limit: 20,
+        sortBy: 'date',
+        order: 'desc'
+      };
 
-      const response = await fetch(`/api/recipes?${queryParams}`);
-      if (!response.ok) throw new Error('Failed to fetch recipes');
-
-      const data = await response.json();
-      setRecipes(data.recipes);
+      const response = await recipeService.getRecipes(searchParams);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      if (response.data) {
+        setRecipes(response.data.recipes);
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to fetch recipes');
       console.error('Error fetching recipes:', error);
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
 
-  const fetchRecipeById = useCallback(async (id: string): Promise<Recipe | null> => {
+  const fetchRecipeDetails = useCallback(async (title: string, cookingTime: number): Promise<Recipe | null> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/recipes/${id}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch recipe');
+      const searchParams: SearchParams = {
+        query: title,
+      };
+      const response = await recipeService.getRecipes(searchParams);
+      if (response.error) {
+        throw new Error(response.error);
       }
-      const data = await response.json();
-      return data.recipe;
+      if (response.data && response.data.recipes.length > 0) {
+        return response.data.recipes.find((recipe: Recipe) => recipe.title === title && recipe.cookingTime === cookingTime) || null;
+      }
+      return null;
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to fetch recipe');
+      setError(error instanceof Error ? error.message : 'Failed to fetch recipe details');
+      console.error('Error fetching recipe details:', error);
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const createRecipe = useCallback(async (data: Partial<Recipe>): Promise<Recipe> => {
+  const createRecipe = useCallback(async (recipeData: Partial<Recipe>): Promise<Recipe | null> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/recipes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create recipe');
+      const response = await recipeService.createRecipe(recipeData);
+      if (response.error) {
+        throw new Error(response.error);
       }
-
-      const newRecipe = await response.json();
-      setRecipes(prev => [newRecipe, ...prev]);
-      return newRecipe;
+  if (response.data) {
+    const newRecipe = response.data || {} as Recipe;
+    setRecipes(prev => [newRecipe, ...prev]);
+    return newRecipe;
+  }
+      return null;
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to create recipe');
-      throw error;
+      console.error('Error creating recipe:', error);
+      return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const updateRecipe = useCallback(async (id: string, data: Partial<Recipe>): Promise<Recipe> => {
+  const updateRecipe = useCallback(async (id: string, recipeData: Partial<Recipe>): Promise<Recipe | null> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/recipes/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update recipe');
+      const response = await recipeService.updateRecipe(id, recipeData);
+      if (response.error) {
+        throw new Error(response.error);
       }
-
-      const updatedRecipe = await response.json();
-      setRecipes(prev => 
-        prev.map(recipe => recipe.id === id ? updatedRecipe : recipe)
-      );
-      return updatedRecipe;
+      if (response.data) {
+        const updatedRecipe = response.data || {} as Recipe;
+        setRecipes(prev => prev.map(recipe => 
+          recipe.id === id ? updatedRecipe : recipe
+        ));
+        return updatedRecipe;
+      }
+      return null;
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update recipe');
-      throw error;
+      console.error('Error updating recipe:', error);
+      return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const deleteRecipe = useCallback(async (id: string): Promise<void> => {
+  const deleteRecipe = useCallback(async (id: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/recipes/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete recipe');
+      const response = await recipeService.deleteRecipe(id);
+      if (response.error) {
+        throw new Error(response.error);
       }
-
       setRecipes(prev => prev.filter(recipe => recipe.id !== id));
+      return true;
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to delete recipe');
-      throw error;
+      console.error('Error deleting recipe:', error);
+      return false;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const likeRecipe = useCallback(async (recipeId: string): Promise<void> => {
+  const likeRecipe = useCallback(async (id: string): Promise<void> => {
     setError(null);
     try {
-      const response = await fetch('/api/recipes/likes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipeId }),
-      });
-
-      if (!response.ok) throw new Error('Failed to like recipe');
-
-      const { likeCount } = await response.json();
-
-      setRecipes(prev =>
-        prev.map(recipe =>
-          recipe.id === recipeId
-            ? { 
-                ...recipe, 
-                isLiked: true,
-                _count: { 
-                  ...recipe._count,
-                  likes: likeCount 
-                }
-              }
-            : recipe
-        )
-      );
+      const response = await recipeService.likeRecipe(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      if (response.data) {
+        setRecipes(prev => prev.map(recipe => {
+          if (recipe.id === id) {
+            const updatedCount: RecipeCount = {
+              ...recipe._count,
+              likes: response.data ? response.data.likeCount : recipe._count.likes
+            };
+            return {
+              ...recipe,
+              isLiked: true,
+              _count: updatedCount
+            };
+          }
+          return recipe;
+        }));
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to like recipe');
       console.error('Error liking recipe:', error);
-      throw error;
     }
   }, []);
 
-  const unlikeRecipe = useCallback(async (recipeId: string): Promise<void> => {
+  const unlikeRecipe = useCallback(async (id: string): Promise<void> => {
     setError(null);
     try {
-      const response = await fetch('/api/recipes/likes', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipeId }),
-      });
-
-      if (!response.ok) throw new Error('Failed to unlike recipe');
-
-      const { likeCount } = await response.json();
-
-      setRecipes(prev =>
-        prev.map(recipe =>
-          recipe.id === recipeId
-            ? { 
-                ...recipe, 
-                isLiked: false,
-                _count: { 
-                  ...recipe._count,
-                  likes: likeCount 
-                }
-              }
-            : recipe
-        )
-      );
+      const response = await recipeService.unlikeRecipe(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      if (response.data) {
+        setRecipes(prev => prev.map(recipe => {
+          if (recipe.id === id) {
+            const updatedCount: RecipeCount = {
+              ...recipe._count,
+              likes: response.data ? response.data.likeCount : recipe._count.likes
+            };
+            return {
+              ...recipe,
+              isLiked: false,
+              _count: updatedCount
+            };
+          }
+          return recipe;
+        }));
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to unlike recipe');
       console.error('Error unliking recipe:', error);
-      throw error;
     }
   }, []);
 
+  const value: RecipeContextType = {
+    recipes,
+    loading,
+    error,
+    fetchRecipes,
+    fetchRecipeDetails,
+    createRecipe,
+    updateRecipe,
+    deleteRecipe,
+    likeRecipe,
+    unlikeRecipe
+  };
+
   return (
-    <RecipeContext.Provider
-      value={{
-        recipes,
-        loading,
-        error,
-        filters,
-        setFilters,
-        fetchRecipes,
-        fetchRecipeById,
-        createRecipe,
-        updateRecipe,
-        deleteRecipe,
-        likeRecipe,
-        unlikeRecipe,
-        clearError,
-      }}
-    >
+    <RecipeContext.Provider value={value}>
       {children}
     </RecipeContext.Provider>
   );

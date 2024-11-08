@@ -1,8 +1,8 @@
-import { Comment, ApiResponse, CommentResponse, CommentsResponse } from '../types';
+import { Comment, ApiResponse, CommentResponse } from '../types/';
 import { API_ENDPOINTS } from '../utils/constants';
 
 export const commentService = {
-  async getComments(recipeId: string): Promise<ApiResponse<CommentsResponse>> {
+  async getComments(recipeId: string): Promise<ApiResponse<CommentResponse>> {
     try {
       const response = await fetch(`${API_ENDPOINTS.COMMENTS}?recipeId=${recipeId}`);
       const data = await response.json();
