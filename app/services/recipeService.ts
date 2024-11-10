@@ -1,109 +1,155 @@
-import { Recipe, ApiResponse, RecipesResponse, SearchParams, FilterOptions } from '../types/';
+import { Recipe } from '../types';
 
-const BASE_URL = '/api/recipes';
+type SortOption = 'trending' | 'latest';
 
-export const recipeService = {
-  async getRecipes(params: SearchParams = {}, filters: FilterOptions = {}): Promise<ApiResponse<RecipesResponse>> {
+interface FeedResponse {
+  recipes: Recipe[];
+  hasMore: boolean;
+}
+
+interface LikeResponse {
+  isLiked: boolean;
+  likes: number;
+}
+
+interface TrendingTag {
+  tag: string;
+  count: number;
+}
+
+interface RecipeResponse {
+  recipes: Recipe[];
+}
+
+class RecipeService {
+  async getFeedRecipes(
+    category: string, 
+    sort: SortOption, 
+    page: number, 
+    tagFilter: string | null
+  ): Promise<FeedResponse> {
+    const response = await fetch('/api/recipes/feed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, sort, page, tag: tagFilter }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch recipes');
+    }
+
+    return await response.json();
+  }
+
+  async getUserRecipes(userId: string): Promise<RecipeResponse> {
+    const response = await fetch(`/api/recipes?userId=${encodeURIComponent(userId)}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch user recipes');
+    }
+
+    return await response.json();
+  }
+
+  async getTrendingTags(): Promise<TrendingTag[]> {
+    const response = await fetch('/api/recipes/trending-tags');
+    if (!response.ok) {
+      throw new Error('Failed to fetch trending tags');
+    }
+    const data = await response.json();
+    return data.tags;
+  }
+
+  async createRecipe(data: Partial<Recipe>): Promise<Recipe> {
+    const response = await fetch('/api/recipes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create recipe');
+    }
+
+    const { recipe } = await response.json();
+    return recipe;
+  }
+
+  async updateRecipe(id: string, data: Partial<Recipe>): Promise<Recipe> {
+    const response = await fetch(`/api/recipes/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update recipe');
+    }
+
+    const { recipe } = await response.json();
+    return recipe;
+  }
+
+  async likeRecipe(recipeId: string): Promise<LikeResponse> {
     try {
-      const searchParams = new URLSearchParams();
+      const response = await fetch(`/api/recipes/${recipeId}/like`, {
+        method: 'POST',
+      });
       
-      // Add search params
-      if (params.query) searchParams.append('query', params.query);
-      if (params.page) searchParams.append('page', params.page.toString());
-      if (params.limit) searchParams.append('limit', params.limit.toString());
-      if (params.sortBy) searchParams.append('sortBy', params.sortBy);
-      if (params.order) searchParams.append('order', params.order);
-
-      // Add filters
-      if (filters.cookingTime) {
-        searchParams.append('minTime', filters.cookingTime.min.toString());
-        searchParams.append('maxTime', filters.cookingTime.max.toString());
+      if (!response.ok) {
+        if (response.status === 400) {
+          // If already liked, force refresh the like status
+          return this.getLikeStatus(recipeId);
+        }
+        throw new Error('Failed to like recipe');
       }
-      if (filters.ingredients?.length) {
-        searchParams.append('ingredients', filters.ingredients.join(','));
-      }
-      if (filters.author) {
-        searchParams.append('author', filters.author);
-      }
-
-      const response = await fetch(`${BASE_URL}?${searchParams}`);
+      
       const data = await response.json();
-      return { data, status: response.status };
+      return {
+        isLiked: true,
+        likes: data.likes
+      };
     } catch (error) {
-      return { error: 'Failed to fetch recipes', status: 500 };
-    }
-  },
-
-  async createRecipe(recipe: Partial<Recipe>): Promise<ApiResponse<Recipe>> {
-    try {
-      const response = await fetch(BASE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(recipe),
-      });
-      const data = await response.json();
-      return { data, status: response.status };
-    } catch (error) {
-      return { error: 'Failed to create recipe', status: 500 };
-    }
-  },
-
-  async getRecipeById(id: string): Promise<ApiResponse<Recipe>> {
-    try {
-      const response = await fetch(`${BASE_URL}/${id}`);
-      const data = await response.json();
-      return { data, status: response.status };
-    } catch (error) {
-      return { error: 'Failed to fetch recipe', status: 500 };
-    }
-  },
-
-  async updateRecipe(id: string, recipe: Partial<Recipe>): Promise<ApiResponse<Recipe>> {
-    try {
-      const response = await fetch(`${BASE_URL}/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(recipe),
-      });
-      const data = await response.json();
-      return { data, status: response.status };
-    } catch (error) {
-      return { error: 'Failed to update recipe', status: 500 };
-    }
-  },
-
-  async deleteRecipe(id: string): Promise<ApiResponse<void>> {
-    try {
-      const response = await fetch(`${BASE_URL}/${id}`, {
-        method: 'DELETE',
-      });
-      return { status: response.status };
-    } catch (error) {
-      return { error: 'Failed to delete recipe', status: 500 };
-    }
-  },
-
-  async likeRecipe(id: string): Promise<ApiResponse<{ likeCount: number }>> {
-    try {
-      const response = await fetch(`${BASE_URL}/${id}/like`, {
-        method: 'POST',
-      });
-      const data = await response.json();
-      return { data, status: response.status };
-    } catch (error) {
-      return { error: 'Failed to like recipe', status: 500 };
-    }
-  },
-
-  async unlikeRecipe(id: string): Promise<ApiResponse<{ likeCount: number }>> {
-    try {
-      const response = await fetch(`${BASE_URL}/${id}/like`, {
-        method: 'DELETE',
-      });
-      const data = await response.json();
-      return { data, status: response.status };
-    } catch (error) {
-      return { error: 'Failed to unlike recipe', status: 500 };
+      throw new Error('Failed to like recipe');
     }
   }
-};
+
+  async unlikeRecipe(recipeId: string): Promise<LikeResponse> {
+    try {
+      const response = await fetch(`/api/recipes/${recipeId}/like`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          // If like not found, force refresh the like status
+          return this.getLikeStatus(recipeId);
+        }
+        throw new Error('Failed to unlike recipe');
+      }
+      
+      const data = await response.json();
+      return {
+        isLiked: false,
+        likes: data.likes
+      };
+    } catch (error) {
+      throw new Error('Failed to unlike recipe');
+    }
+  }
+
+  private async getLikeStatus(recipeId: string): Promise<LikeResponse> {
+    const response = await fetch(`/api/recipes/${recipeId}/like/status`);
+    if (!response.ok) {
+      throw new Error('Failed to get like status');
+    }
+    const { isLiked, likes } = await response.json();
+    return { isLiked, likes };
+  }
+}
+
+export const recipeService = new RecipeService();

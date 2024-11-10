@@ -1,65 +1,93 @@
-import { User, ApiResponse, UserResponse } from '../types/';
+import { Recipe, User } from '../types';
 
-const BASE_URL = '/api/users';
+interface UserResponse {
+  user: User;
+}
 
-export const userService = {
-  async getUserProfile(userId: string): Promise<ApiResponse<UserResponse>> {
-    try {
-      const response = await fetch(`${BASE_URL}/${userId}`);
-      const data = await response.json();
-      return { data, status: response.status };
-    } catch (error) {
-      return { error: 'Failed to fetch user profile', status: 500 };
+interface FavoritesResponse {
+  favorites: Recipe[];
+}
+
+interface FollowCountsResponse {
+  followersCount: number;
+  followingCount: number;
+}
+
+interface UserStatsResponse {
+  recipesCount: number;
+  followersCount: number;
+  followingCount: number;
+  likesReceived: number;
+}
+
+class UserService {
+  async getUserProfile(userId: string) {
+    const response = await fetch(`/api/users/${userId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch user profile');
     }
-  },
-
-  async updateUserProfile(userId: string, userData: Partial<User>): Promise<ApiResponse<User>> {
-    try {
-      const response = await fetch(`${BASE_URL}/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      });
-      const data = await response.json();
-      return { data, status: response.status };
-    } catch (error) {
-      return { error: 'Failed to update user profile', status: 500 };
-    }
-  },
-
-  async getUserStats(userId: string): Promise<ApiResponse<any>> {
-    try {
-      const response = await fetch(`${BASE_URL}/${userId}/stats`);
-      const data = await response.json();
-      return { data, status: response.status };
-    } catch (error) {
-      return { error: 'Failed to fetch user stats', status: 500 };
-    }
-  },
-
-  async followUser(userId: string): Promise<ApiResponse<void>> {
-    try {
-      const response = await fetch(`/api/followUsers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ followingId: userId }),
-      });
-      return { status: response.status };
-    } catch (error) {
-      return { error: 'Failed to follow user', status: 500 };
-    }
-  },
-
-  async unfollowUser(userId: string): Promise<ApiResponse<void>> {
-    try {
-      const response = await fetch(`/api/followUsers`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ followingId: userId }),
-      });
-      return { status: response.status };
-    } catch (error) {
-      return { error: 'Failed to unfollow user', status: 500 };
-    }
+    return await response.json();
   }
-};
+
+  async updateUserProfile(userId: string, userData: Partial<User>) {
+    const response = await fetch(`/api/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update user profile');
+    }
+    return await response.json();
+  }
+
+  async getUserStats(userId: string): Promise<UserStatsResponse> {
+    const response = await fetch(`/api/users/${userId}/stats`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch user stats');
+    }
+    return await response.json();
+  }
+
+  async getFavorites(): Promise<FavoritesResponse> {
+    const response = await fetch('/api/favorites');
+    if (!response.ok) {
+      throw new Error('Failed to fetch favorites');
+    }
+    return await response.json();
+  }
+
+  async getFollowCounts(): Promise<FollowCountsResponse> {
+    const response = await fetch('/api/followCounts');
+    if (!response.ok) {
+      throw new Error('Failed to fetch follow counts');
+    }
+    return await response.json();
+  }
+
+  async followUser(userId: string) {
+    const response = await fetch('/api/followUsers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to follow user');
+    }
+    return await response.json();
+  }
+
+  async unfollowUser(userId: string) {
+    const response = await fetch('/api/followUsers', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to unfollow user');
+    }
+    return await response.json();
+  }
+}
+
+export const userService = new UserService();

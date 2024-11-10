@@ -62,7 +62,7 @@ export interface Recipe {
   author?: User;
   createdAt: string;
   updatedAt: string;
-  status: 'draft' | 'published' | 'ai_generated';
+  status: 'draft' | 'published' | 'archived' | 'ai_generated';
   _count: RecipeCount;
   isLiked?: boolean;
   isOwner?: boolean;
@@ -171,7 +171,6 @@ export interface RecipeFeedFilters {
   sort: string;
   page: number;
 }
-
 
 export interface CommentResponse {
   id: string;

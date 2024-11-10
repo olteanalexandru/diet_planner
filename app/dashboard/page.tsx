@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { Recipe } from '../types';
 import { RecipeCard } from '../Components/recipes/RecipeCard';
 import Link from 'next/link';
-
-
+import { DashboardProvider, useDashboard } from '../context/DashboardContext';
 
 const RecipesList: React.FC<{ recipes: Recipe[] }> = ({ recipes }) => {
   const draftRecipes = recipes.filter(recipe => recipe.status === 'draft');
@@ -54,69 +53,15 @@ const RecipesList: React.FC<{ recipes: Recipe[] }> = ({ recipes }) => {
   );
 };
 
-export default function Dashboard() {
+function DashboardContent() {
   const { user, isLoading } = useUser();
-  const [customRecipes, setCustomRecipes] = useState<Recipe[]>([]);
-  const [favorites, setFavorites] = useState<Recipe[]>([]);
-  const [followersCount, setFollowersCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user) {
-      fetchCustomRecipes();
-      fetchFavorites();
-      fetchFollowCounts();
-    }
-  }, [user]);
-
-  const fetchCustomRecipes = async () => {
-    try {
-      if (!user?.sub) {
-        throw new Error('No user ID available');
-      }
-  
-      const response = await fetch(`/api/recipes?userId=${encodeURIComponent(user.sub)}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch custom recipes');
-      }
-      const data = await response.json();
-      setCustomRecipes(data.recipes);
-    } catch (error) {
-      console.error('Error fetching custom recipes:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load custom recipes');
-    }
-  };
-
-  const fetchFavorites = async () => {
-    try {
-      const response = await fetch('/api/favorites');
-      if (!response.ok) {
-        throw new Error('Failed to fetch favorites');
-      }
-      const data = await response.json();
-      setFavorites(data.favorites);
-    } catch (error) {
-      console.error('Error fetching favorites:', error);
-      setError('Failed to load favorites');
-    }
-  };
-
-  const fetchFollowCounts = async () => {
-    try {
-      const response = await fetch('/api/followCounts');
-      if (!response.ok) {
-        throw new Error('Failed to fetch follow counts');
-      }
-      const data = await response.json();
-      setFollowersCount(data.followersCount);
-      setFollowingCount(data.followingCount);
-    } catch (error) {
-      console.error('Error fetching follow counts:', error);
-      setError('Failed to load social stats');
-    }
-  };
+  const { 
+    customRecipes, 
+    favorites, 
+    followersCount, 
+    followingCount, 
+    error 
+  } = useDashboard();
 
   if (isLoading) return <div>Loading...</div>;
   if (!user) return <div>Please log in to view your dashboard.</div>;
@@ -155,7 +100,13 @@ export default function Dashboard() {
       </div>
       <RecipesList recipes={customRecipes} />
     </div>
+  );
+}
 
-   
+export default function Dashboard() {
+  return (
+    <DashboardProvider>
+      <DashboardContent />
+    </DashboardProvider>
   );
 }

@@ -3,11 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { Filter, Loader2, TrendingUp, Clock, ArrowUp } from 'lucide-react';
-import { Recipe } from '../types';
 import { RecipeGridSkeleton } from '../Components/recipes/RecipeSkeleton';
 import { FeedRecipeCard } from '../Components/recipes/FeedRecipeCard';
-
-type SortOption = 'trending' | 'latest';
+import { useRecipeFeed, RecipeFeedProvider } from '../context/RecipeFeedContext';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🍽️' },
@@ -18,18 +16,27 @@ const CATEGORIES = [
   { id: 'budget', name: 'Budget', icon: '💰' },
 ] as const;
 
-export default function RecipeFeed() {
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [category, setCategory] = useState<string>('all');
-  const [sort, setSort] = useState<SortOption>('trending');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [trendingTags, setTrendingTags] = useState<{ tag: string; count: number }[]>([]);
+function RecipeFeedContent() {
+  const { 
+    recipes, 
+    loading, 
+    error, 
+    category, 
+    sort, 
+    hasMore,
+    trendingTags,
+    tagFilter,
+    setCategory,
+    setSort,
+    setTagFilter,
+    handleLike,
+    handleUnlike,
+    loadMoreRecipes,
+    refreshRecipes
+  } = useRecipeFeed();
+
   const { ref, inView } = useInView();
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [tagFilter, setTagFilter] = useState<string | null>(null);
 
   // Scroll to top visibility
   useEffect(() => {
@@ -40,176 +47,19 @@ export default function RecipeFeed() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Fetch recipes
-  const fetchRecipes = async (reset = false) => {
-    try {
-      setLoading(true);
-      const currentPage = reset ? 1 : page;
-      const response = await fetch('/api/recipes/feed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          category, 
-          sort, 
-          page: currentPage,
-          tag: tagFilter 
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch recipes');
-      
-      const data = await response.json();
-      
-      setRecipes(prev => reset ? data.recipes : [...prev, ...data.recipes]);
-      setHasMore(data.hasMore);
-      
-      if (reset) setPage(1);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load recipes');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLike = async (recipeId: string) => {
-    const recipe = recipes.find(r => r.id === recipeId);
-    if (!recipe) return;
-
-    try {
-      const response = await fetch(`/api/recipes/${recipeId}/like`, {
-        method: 'POST',
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        if (response.status === 400 && data.error === 'Already liked') {
-          // If already liked, force refresh the like status
-          const statusResponse = await fetch(`/api/recipes/${recipeId}/like/status`);
-          if (statusResponse.ok) {
-            const { isLiked, likes } = await statusResponse.json();
-            setRecipes(prev => prev.map(r => 
-              r.id === recipeId 
-                ? { 
-                    ...r, 
-                    isLiked,
-                    _count: {
-                      ...r._count,
-                      likes
-                    }
-                  }
-                : r
-            ));
-          }
-          return;
-        }
-        throw new Error(data.error || 'Failed to like recipe');
-      }
-      
-      setRecipes(prev => prev.map(r => 
-        r.id === recipeId 
-          ? { 
-              ...r, 
-              isLiked: true,
-              _count: {
-                ...r._count,
-                likes: data.likes
-              }
-            }
-          : r
-      ));
-    } catch (error) {
-      console.error('Error liking recipe:', error);
-    }
-  };
-
-  const handleUnlike = async (recipeId: string) => {
-    const recipe = recipes.find(r => r.id === recipeId);
-    if (!recipe) return;
-
-    try {
-      const response = await fetch(`/api/recipes/${recipeId}/like`, {
-        method: 'DELETE',
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        if (response.status === 404 && data.error === 'Like not found') {
-          // If like not found, force refresh the like status
-          const statusResponse = await fetch(`/api/recipes/${recipeId}/like/status`);
-          if (statusResponse.ok) {
-            const { isLiked, likes } = await statusResponse.json();
-            setRecipes(prev => prev.map(r => 
-              r.id === recipeId 
-                ? { 
-                    ...r, 
-                    isLiked,
-                    _count: {
-                      ...r._count,
-                      likes
-                    }
-                  }
-                : r
-            ));
-          }
-          return;
-        }
-        throw new Error(data.error || 'Failed to unlike recipe');
-      }
-      
-      setRecipes(prev => prev.map(r => 
-        r.id === recipeId 
-          ? { 
-              ...r, 
-              isLiked: false,
-              _count: {
-                ...r._count,
-                likes: data.likes
-              }
-            }
-          : r
-      ));
-    } catch (error) {
-      console.error('Error unliking recipe:', error);
-    }
-  };
-
-  // Fetch trending tags
-  useEffect(() => {
-    const fetchTrendingTags = async () => {
-      try {
-        const response = await fetch('/api/recipes/trending-tags');
-        const data = await response.json();
-        setTrendingTags(data.tags);
-      } catch (err) {
-        console.error('Failed to fetch trending tags:', err);
-      }
-    };
-    fetchTrendingTags();
-  }, []);
-
-  // Initial load and category/sort changes
-  useEffect(() => {
-    fetchRecipes(true);
-  }, [category, sort]);
-
   // Infinite scroll
   useEffect(() => {
     if (inView && hasMore && !loading) {
-      setPage(prev => prev + 1);
-      fetchRecipes();
+      loadMoreRecipes();
     }
-  }, [inView, hasMore, loading]);
+  }, [inView, hasMore, loading, loadMoreRecipes]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleTagClick = (tag: string) => {
-    setTagFilter(prev => prev === tag ? null : tag);
-    setPage(1);
-    fetchRecipes(true);
+    setTagFilter(tagFilter === tag ? null : tag);
   };
 
   return (
@@ -313,7 +163,7 @@ export default function RecipeFeed() {
               <div className="card-cyber p-6 text-center">
                 <p className="text-red-400">{error}</p>
                 <button 
-                  onClick={() => fetchRecipes(true)}
+                  onClick={refreshRecipes}
                   className="btn-cyber mt-4"
                 >
                   Try Again
@@ -359,5 +209,13 @@ export default function RecipeFeed() {
         </button>
       )}
     </div>
+  );
+}
+
+export default function RecipeFeedPage() {
+  return (
+    <RecipeFeedProvider>
+      <RecipeFeedContent />
+    </RecipeFeedProvider>
   );
 }

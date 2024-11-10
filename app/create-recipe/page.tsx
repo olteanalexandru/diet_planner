@@ -4,39 +4,14 @@ import React from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { RecipeForm } from '../Components/recipes/RecipeForm';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { Recipe } from '../types/index';
+import { RecipeFormProvider, useRecipeForm } from '../context/RecipeFormContext';
 
-export default function CreateRecipe() {
-  const { user, isLoading } = useUser();
-  const router = useRouter();
+function CreateRecipeContent() {
+  const { user, isLoading: userLoading } = useUser();
+  const { createRecipe, loading: formLoading, error } = useRecipeForm();
 
-  const handleSubmit = async (data: Partial<Recipe>): Promise<void> => {
-    const route = '/api/recipes/';
-
-    const response = await fetch(route, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data), // Use the status from the form data
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to create recipe');
-    }
-
-    const { recipe } = await response.json();
-    
-    // Redirect based on status
-    if (recipe.status === 'draft') {
-      router.push('/dashboard'); // Drafts are shown in dashboard
-    } else {
-      router.push(`/recipe/${encodeURIComponent(recipe.title)}/${recipe.cookingTime}`);
-    }
-  };
-
-  if (isLoading) {
+  if (userLoading || formLoading) {
     return (
       <div className="flex-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 animate-spin text-cyber-primary" />
@@ -65,10 +40,23 @@ export default function CreateRecipe() {
           </div>
           
           <div className="card-cyber p-8">
-            <RecipeForm onSubmit={handleSubmit} />
+            {error && (
+              <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+                {error}
+              </div>
+            )}
+            <RecipeForm onSubmit={createRecipe} />
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreateRecipePage() {
+  return (
+    <RecipeFormProvider>
+      <CreateRecipeContent />
+    </RecipeFormProvider>
   );
 }
