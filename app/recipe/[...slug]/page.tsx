@@ -33,6 +33,8 @@ export default function RecipePage() {
         const slugParts = Array.isArray(params.slug) ? params.slug : [params.slug];
         const title = decodeURIComponent(slugParts[0]);
         const cookingTime = slugParts[1];
+        //if there is no cooking time, the slug will be in the format of /recipe/id
+        const recipeId =  cookingTime ? null : title;
 
         // First get recipe details to get the ID
         const recipeResponse = await fetch('/api/getRecipeDetails', {
@@ -40,7 +42,8 @@ export default function RecipePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             title,
-            cookingTime: cookingTime || "30"
+            cookingTime,
+            recipeId
           }),
         });
 

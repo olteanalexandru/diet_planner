@@ -299,7 +299,7 @@ export default function SearchRecipePage() {
                 {searchResults.map((recipe) => (
                   <div
                     key={recipe.id}
-                    onClick={() => router.push(`/recipes/${recipe.id}`)}
+                    onClick={() => router.push(`/recipe/${recipe.id}`)}
                     className="cursor-pointer bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
                   >
                     <div className="relative h-48">

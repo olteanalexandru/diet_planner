@@ -67,20 +67,54 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { title, cookingTime, imageUrl } = requestBody;
+  const { title, cookingTime, imageUrl , recipeId  } = requestBody;
 
-  if (!title || !cookingTime) {
-    return NextResponse.json({ error: 'Missing title or cookingTime in request body' }, { status: 400 });
-  } else { 
-    console.log("title: ", title + " cookingTime: ", cookingTime + " imageUrl: ", imageUrl);
+  if (recipeId) {
+    const recipe = await prisma.recipe.findFirst({
+      where: {
+        id: recipeId,
+      },
+      include: {
+        author: true,
+        comments: {
+          include: {
+            user: true,
+            likes: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+    });
+
+    if (!recipe) {
+      return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
+    }
+
+    const commentsWithLikes = recipe.comments.map((comment: any) => ({
+      ...comment,
+      likes: comment.likes.length,
+      isLiked: userId ? comment.likes.some((like: { userId: string }) => like.userId === userId) : false,
+    }));
+
+    return NextResponse.json({
+      recipe: {
+        ...recipe,
+        comments: commentsWithLikes,
+        isOwner: userId === recipe.author.id,
+      },
+    });
+
   }
+
 
   const normalisedTitle = normalizeTitle(title);
 
   console.log("normalisedTitle: ", normalisedTitle);
 
   let attempts = 0;
-  while (attempts < MAX_RETRIES) {
+  while (attempts < MAX_RETRIES ) {
     try {
       // First, check if the recipe exists in the database
       let recipe = await prisma.recipe.findFirst({

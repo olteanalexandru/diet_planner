@@ -2,20 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { Recipe } from '../types';
+import { Recipe, DashboardContextType } from '../types';
 import { userService } from '../services/userService';
 import { recipeService } from '../services/recipeService';
-
-interface DashboardContextType {
-  customRecipes: Recipe[];
-  favorites: Recipe[];
-  followersCount: number;
-  followingCount: number;
-  error: string | null;
-  refreshCustomRecipes: () => Promise<void>;
-  refreshFavorites: () => Promise<void>;
-  refreshFollowCounts: () => Promise<void>;
-}
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 

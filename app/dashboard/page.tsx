@@ -19,7 +19,7 @@ const RecipesList: React.FC<{ recipes: Recipe[] }> = ({ recipes }) => {
             Drafts & Incomplete Recipes
           </h2>
           <div className="grid gap-6">
-            {draftRecipes.map(recipe => (
+            {draftRecipes.map((recipe: Recipe) => (
               <div key={recipe.id} className="card-cyber relative">
                 <div className="absolute top-4 right-4">
                   <span className="px-3 py-1 rounded-full bg-cyber-primary/10 text-cyber-primary text-sm">
@@ -44,7 +44,7 @@ const RecipesList: React.FC<{ recipes: Recipe[] }> = ({ recipes }) => {
       <div>
         <h2 className="text-xl font-semibold mb-4">Published Recipes</h2>
         <div className="grid gap-6">
-          {publishedRecipes.map(recipe => (
+          {publishedRecipes.map((recipe: Recipe) => (
             <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
         </div>
@@ -74,7 +74,7 @@ function DashboardContent() {
         <div className="col-md-6">
           <h2>Your Custom Recipes</h2>
           {customRecipes.length > 0 ? (
-            customRecipes.map((recipe) => (
+            customRecipes.map((recipe: Recipe) => (
               <RecipeCard key={recipe.id} recipe={recipe} />
             ))
           ) : (
@@ -85,7 +85,7 @@ function DashboardContent() {
         <div className="col-md-6">
           <h2>Your Favorites</h2>
           {favorites.length > 0 ? (
-            favorites.map((recipe) => (
+            favorites.map((recipe: Recipe) => (
               <RecipeCard key={recipe.id} recipe={recipe} />
             ))
           ) : (

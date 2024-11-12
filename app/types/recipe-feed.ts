@@ -1,6 +1,5 @@
 export type SortOption = 'trending' | 'latest';
 export type Category = 'all' | 'quick' | 'vegetarian' | 'desserts' | 'healthy' | 'budget';
-import { Recipe } from './index';
 
 export interface RecipeFeedFilters {
   category?: Category;
@@ -47,4 +46,9 @@ export interface RecipeFeedState {
   hasMore: boolean;
   page: number;
   filters: RecipeFeedFilters;
+}
+
+export interface TrendingTag {
+  tag: string;
+  count: number;
 }

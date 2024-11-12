@@ -30,18 +30,12 @@ export async function POST(request: Request) {
             array_contains: diets,
           },
         } : undefined,
-        ingredients?.length > 0 ? {
-          ingredients: {
-            hasSome: ingredients
-          }
-        } : undefined,
       ].filter(Boolean),
     };
 
-    const recipes = await prisma.recipe.findMany({
+    // First fetch recipes without ingredients filter
+    let recipes = await prisma.recipe.findMany({
       where: whereConditions,
-      skip,
-      take: limit,
       orderBy: {
         createdAt: 'desc',
       },
@@ -55,9 +49,20 @@ export async function POST(request: Request) {
       },
     });
 
-    const total = await prisma.recipe.count({
-      where: whereConditions
-    });
+    // Manually filter for ingredients if they exist
+    if (ingredients?.length > 0) {
+      recipes = recipes.filter(recipe => 
+        ingredients.some(ingredient =>
+          recipe.ingredients.some(recipeIngredient =>
+            recipeIngredient.toLowerCase().includes(ingredient.toLowerCase())
+          )
+        )
+      );
+    }
+
+    // Apply pagination after filtering
+    const total = recipes.length;
+    recipes = recipes.slice(skip, skip + limit);
 
     return NextResponse.json({
       recipes,

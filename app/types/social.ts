@@ -39,7 +39,6 @@ export interface SocialActivity {
   commentContent?: string;
   timestamp: string | Date;
   interactions: ActivityInteractions;
-  
 }
 
 export interface ActivityInteractions {
@@ -173,7 +172,7 @@ export interface SocialEventHandlers {
   onRecipeClick: (recipeId: string) => void;
 }
 
-export interface FilterOptions {
+export interface SocialFilterOptions {
   timeframe: TimeFrame;
   activityTypes: ActivityType[];
   following: boolean;
