@@ -8,22 +8,28 @@ export async function POST() {
     // Delete all data in the correct order to respect foreign key constraints
     await prisma.$transaction([
       // First level - No dependencies
+      prisma.activityCommentLike.deleteMany(),
       prisma.commentLike.deleteMany(),
       prisma.recipeLike.deleteMany(),
       prisma.activityLike.deleteMany(),
-      prisma.activityComment.deleteMany(),
       
       // Second level - Depends on first level
+      prisma.activityComment.deleteMany(),
       prisma.comment.deleteMany(),
       prisma.favorite.deleteMany(),
-      prisma.activity.deleteMany(),
       prisma.mealPlan.deleteMany(),
       
-      // Third level - Main content
+      // Third level - Activity and Achievement
+      prisma.activity.deleteMany(),
+      prisma.achievement.deleteMany(),
+      
+      // Fourth level - Recipe
       prisma.recipe.deleteMany(),
       
-      // Fourth level - User related
+      // Fifth level - User relationships
       prisma.follow.deleteMany(),
+      
+      // Final level - Users
       prisma.user.deleteMany(),
     ]);
 

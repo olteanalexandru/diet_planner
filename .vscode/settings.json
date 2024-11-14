@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/3c2092ea-5e3d-4aa5-9b15-6192afaeea7d/resourceGroups/Recipe_finder/providers/Microsoft.Web/sites/recipe-finder",
+    "appService.deploySubpath": "."
+}
