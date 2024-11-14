@@ -5,7 +5,7 @@ import { getSession } from '@auth0/nextjs-auth0';
 
 const prisma = new PrismaClient();
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const session = await getSession();
     if (!session?.user) {

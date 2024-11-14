@@ -1,10 +1,6 @@
 import { UserProfile } from '@auth0/nextjs-auth0/client';
 
-interface Auth0User extends UserProfile {
-  sub: string;
-  email?: string;
-  name?: string;
-}
+
 
 export interface User {
   id: string;
@@ -22,4 +18,5 @@ export interface User {
     following: number;
   };
   isFollowing?: boolean;
+  createdAt: string;
 }

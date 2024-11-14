@@ -111,7 +111,7 @@ export function RecipeFeedProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     fetchRecipes(true);
-  }, [category, sort, tagFilter]);
+  }, [category, sort, tagFilter,]);
 
   const value = {
     recipes,

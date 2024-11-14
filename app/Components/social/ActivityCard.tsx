@@ -13,6 +13,7 @@ interface ActivityCardProps {
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
   const [isCommenting, setIsCommenting] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [comment, setComment] = useState('');
   const { likeActivity, unlikeActivity, addComment, shareActivity } = useSocialFeed();
@@ -37,6 +38,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
       await addComment(activity.id, comment);
       setComment('');
       setIsCommenting(false);
+      // Show comments after posting
+      setShowComments(true);
     } catch (error) {
       console.error('Error adding comment:', error);
     }
@@ -90,10 +93,21 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
                 </Link>
                 <span>earned an achievement!</span>
               </div>
-              <div className="text-lg font-semibold text-cyber-primary mt-1">
-                {activity.achievement?.title}
-              </div>
-              <p className="text-sm text-gray-400">{activity.achievement?.description}</p>
+              {activity.achievement && (
+                <>
+                  <div className="text-lg font-semibold text-cyber-primary mt-1">
+                    {activity.achievement.title}
+                  </div>
+                  <p className="text-sm text-gray-400">
+                    {activity.achievement.description}
+                  </p>
+                </>
+              )}
+              {activity.milestoneCount && (
+                <p className="text-sm text-gray-400">
+                  Milestone: {activity.milestoneCount}
+                </p>
+              )}
             </div>
           </div>
         );
@@ -227,7 +241,15 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
               <span>{activity.interactions.likes}</span>
             </button>
             <button
-              onClick={() => setIsCommenting(!isCommenting)}
+              onClick={() => {
+                if (isCommenting) {
+                  setIsCommenting(false);
+                } else if (showComments) {
+                  setShowComments(false);
+                } else {
+                  setShowComments(true);
+                }
+              }}
               className="flex items-center gap-2 text-gray-400 hover:text-cyber-primary transition-colors"
             >
               <MessageCircle className="w-5 h-5" />
@@ -274,6 +296,14 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
               </button>
             </div>
           </form>
+        )}
+
+        {/* Comments Section */}
+        {showComments && (
+          <ActivityComments
+            activityId={activity.id}
+            onClose={() => setShowComments(false)}
+          />
         )}
 
         {/* Share Modal */}

@@ -19,7 +19,7 @@ function isValidJSON(str: string) {
   try {
     JSON.parse(str);
     return true;
-  } catch (e) {
+  } catch (error) {
     return false;
   }
 }

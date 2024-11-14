@@ -61,7 +61,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
     cookingTime: initialData?.cookingTime || 30,
     servings: initialData?.servings || 4,
     difficulty: initialData?.difficulty || 'medium',
-    category: initialData?.category || 'dinner',
+    category: (initialData?.category as 'breakfast' | 'lunch' | 'dinner' | 'dessert' | 'snack' | 'beverage') || 'dinner',
     tags: initialData?.tags || [],
     dietaryInfo: initialData?.dietaryInfo || {
       isVegetarian: false,
@@ -75,10 +75,10 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
     description: initialData?.description || '',
     prepTime: initialData?.prepTime || 15,
     totalTime: initialData?.totalTime || 45,
-    calories: initialData?.calories || null,
-    protein: initialData?.protein || null,
-    carbs: initialData?.carbs || null,
-    fat: initialData?.fat || null,
+    calories: initialData?.calories || undefined,
+    protein: initialData?.protein || undefined,
+    carbs: initialData?.carbs || undefined,
+    fat: initialData?.fat || undefined,
   });
 
   const handleSubmit = async (e: React.FormEvent, status: 'draft' | 'published' = 'published') => {
@@ -102,15 +102,15 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
         ...formData,
         status,
         // Ensure category is one of the valid categories
-        category: CATEGORIES.map(c => c.id).includes(formData.category) 
+        category: (CATEGORIES.map(c => c.id) as readonly string[]).includes(formData.category) 
           ? formData.category 
           : 'other',
         // Combine custom tags and selected tags
-        tags: [...new Set([...formData.tags, ...formData.customTags])],
+        tags: Array.from(new Set([...formData.tags, ...formData.customTags])),
         // Add dietary info
         dietaryInfo,
         // Add cuisine if found
-        cuisine: cuisineTag || null,
+        cuisine: cuisineTag || undefined,
         // Remove form-specific fields
         customTags: undefined,
         newTag: undefined,
@@ -256,7 +256,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
             value={formData.calories || ''}
             onChange={e => setFormData(prev => ({ 
               ...prev, 
-              calories: e.target.value ? parseInt(e.target.value) : null
+              calories: e.target.value ? parseInt(e.target.value) : undefined
             }))}
             className="input-cyber w-full"
             min="0"
@@ -271,7 +271,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
             value={formData.protein || ''}
             onChange={e => setFormData(prev => ({ 
               ...prev, 
-              protein: e.target.value ? parseFloat(e.target.value) : null
+              protein: e.target.value ? parseFloat(e.target.value) : undefined
             }))}
             className="input-cyber w-full"
             min="0"
@@ -287,7 +287,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
             value={formData.carbs || ''}
             onChange={e => setFormData(prev => ({ 
               ...prev, 
-              carbs: e.target.value ? parseFloat(e.target.value) : null
+              carbs: e.target.value ? parseFloat(e.target.value) : undefined
             }))}
             className="input-cyber w-full"
             min="0"
@@ -303,7 +303,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
             value={formData.fat || ''}
             onChange={e => setFormData(prev => ({ 
               ...prev, 
-              fat: e.target.value ? parseFloat(e.target.value) : null
+              fat: e.target.value ? parseFloat(e.target.value) : undefined
             }))}
             className="input-cyber w-full"
             min="0"

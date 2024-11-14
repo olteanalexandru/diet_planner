@@ -16,13 +16,6 @@ export async function POST(
   try {
     const { commentId } = params;
 
-    const like = await prisma.commentLike.create({
-      data: {
-        user: { connect: { id: session.user.sub } },
-        comment: { connect: { id: commentId } },
-      },
-    });
-
     const likes = await prisma.commentLike.count({
       where: { commentId },
     });

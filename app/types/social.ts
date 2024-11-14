@@ -1,4 +1,4 @@
-import { User, Recipe } from './index';
+
 
 export type ActivityType = 
   | 'generated'    
@@ -70,6 +70,8 @@ export interface ActivityFilter {
   userId?: string;
   timeframe?: TimeFrame;
   following?: boolean;
+  category?: string;
+  sortBy?: string;
 }
 
 export type TimeFrame = 'today' | 'week' | 'month' | 'all';

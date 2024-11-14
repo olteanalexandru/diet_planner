@@ -1,8 +1,5 @@
 import { Recipe, User } from '../types';
 
-interface UserResponse {
-  user: User;
-}
 
 interface FavoritesResponse {
   favorites: Recipe[];
@@ -14,6 +11,11 @@ interface FollowCountsResponse {
 }
 
 interface UserStatsResponse {
+  error: any;
+  data: any;
+  success: any;
+  user: User;
+  
   recipesCount: number;
   followersCount: number;
   followingCount: number;

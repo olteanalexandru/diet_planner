@@ -2,9 +2,10 @@
 
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
-import { Recipe } from '@/app/types';
-import { RecipeDetail } from '@/app/Components/recipes/RecipeDetail';
-import { RecipeForm } from '@/app/Components/recipes/RecipeForm';
+import { Recipe } from '../../types';
+import { Comment } from '../../types/comment';
+import { RecipeDetail } from '../../Components/recipes/RecipeDetail';
+import { RecipeForm } from '../../Components/recipes/RecipeForm';
 import { Loader2 } from 'lucide-react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 
@@ -17,7 +18,7 @@ export default function RecipePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const commentsRef = useRef<HTMLDivElement>(null);
-  const [comments, setComments] = useState([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
 
   const isEditMode = pathname.endsWith('/edit');

@@ -1,4 +1,5 @@
 import { User } from './user';
+import { Comment } from './comment';
 
 export interface RecipeCount {
   likes: number;
@@ -7,6 +8,7 @@ export interface RecipeCount {
 }
 
 export interface Recipe {
+  [x: string]: any;
   id: string;
   title: string;
   description?: string;
@@ -39,6 +41,7 @@ export interface Recipe {
   _count: RecipeCount;
   isLiked?: boolean;
   isOwner?: boolean;
+  comments?: Comment[];
 }
 
 export interface SearchParams {

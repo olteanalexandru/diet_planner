@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { Loader2, UserPlus, UserMinus } from 'lucide-react';
-
-interface FollowButtonProps {
-  userId: string;
-  onFollowToggle?: (isFollowing: boolean) => void;
-}
-
+import { FollowButtonProps} from '../types';
 export const FollowButton: React.FC<FollowButtonProps> = ({ userId, onFollowToggle }) => {
   const { user } = useUser();
   const [isFollowing, setIsFollowing] = useState(false);

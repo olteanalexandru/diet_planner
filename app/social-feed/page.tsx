@@ -1,12 +1,12 @@
 'use client'
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { Filter, Users, TrendingUp, ChefHat, Flame, Loader2, Clock } from 'lucide-react';
 import { ActivityCard } from '../Components/social/ActivityCard';
 import { SuggestedUsers } from '../Components/social/SuggestedUsers';
 import { TrendingTopics } from '../Components/social/TrendingTopics';
 import { useSocialFeed } from '../context/SocialFeedContext';
-import { ActivityType, ActivityFilter, TimeFrame } from '../types/social';
+
 
 const SocialFeed = () => {
   // Add loading ref to prevent multiple calls
@@ -27,29 +27,14 @@ const SocialFeed = () => {
     setFilters
   } = useSocialFeed();
 
-  // State for category and sort options
-  const [category, setCategory] = useState<string>('all');
-  const [sort, setSort] = useState<string>('trending');
-
   // Activity type options with icons and labels
-  const activityTypes: Array<{ value: ActivityType; label: string; icon: React.ReactNode }> = [
+  const activityTypes: Array<{ value: string; label: string; icon: React.ReactNode }> = [
+    { value: 'all', label: 'All Activities', icon: <Filter size={16} /> },
     { value: 'recipe_created', label: 'Recipes', icon: <ChefHat size={16} /> },
     { value: 'recipe_liked', label: 'Likes', icon: <Flame size={16} /> },
     { value: 'started_following', label: 'Following', icon: <Users size={16} /> },
     { value: 'achievement_earned', label: 'Achievements', icon: <TrendingUp size={16} /> }
   ];
-
-  const timeframes: Array<{ value: TimeFrame; label: string }> = [
-    { value: 'today', label: 'Today' },
-    { value: 'week', label: 'This Week' },
-    { value: 'month', label: 'This Month' },
-    { value: 'all', label: 'All Time' }
-  ];
-
-  // Reset page when filters change
-  useEffect(() => {
-    fetchActivities(1);
-  }, [filters, category, sort]);
 
   // Handle infinite scroll
   useEffect(() => {
@@ -66,7 +51,15 @@ const SocialFeed = () => {
     };
 
     handleScroll();
-  }, [inView, hasMore, activities.length, isLoading]);
+  }, [inView, hasMore, activities.length, isLoading, fetchActivities]);
+
+  const handleCategoryChange = (category: string) => {
+    setFilters({ category });
+  };
+
+  const handleSortChange = (sortBy: 'trending' | 'latest') => {
+    setFilters({ sortBy });
+  };
 
   return (
     <div className="page-container">
@@ -79,9 +72,9 @@ const SocialFeed = () => {
               {activityTypes.map(type => (
                 <button
                   key={type.value}
-                  onClick={() => setCategory(type.value)}
+                  onClick={() => handleCategoryChange(type.value)}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                    category === type.value 
+                    filters.category === type.value 
                       ? 'bg-cyber-primary text-space-900' 
                       : 'hover:bg-space-700'
                   }`}
@@ -97,9 +90,9 @@ const SocialFeed = () => {
             <h2 className="text-lg font-semibold mb-4">Sort By</h2>
             <div className="space-y-1">
               <button
-                onClick={() => setSort('trending')}
+                onClick={() => handleSortChange('trending')}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  sort === 'trending' 
+                  filters.sortBy === 'trending' 
                     ? 'bg-cyber-primary text-space-900' 
                     : 'hover:bg-space-700'
                 }`}
@@ -108,9 +101,9 @@ const SocialFeed = () => {
                 Trending
               </button>
               <button
-                onClick={() => setSort('latest')}
+                onClick={() => handleSortChange('latest')}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  sort === 'latest' 
+                  filters.sortBy === 'latest' 
                     ? 'bg-cyber-primary text-space-900' 
                     : 'hover:bg-space-700'
                 }`}
@@ -119,6 +112,16 @@ const SocialFeed = () => {
                 Latest
               </button>
             </div>
+          </div>
+
+          {/* Suggested Users */}
+          <div className="hidden lg:block">
+            <SuggestedUsers />
+          </div>
+
+          {/* Trending Topics */}
+          <div className="hidden lg:block">
+            <TrendingTopics />
           </div>
         </aside>
 

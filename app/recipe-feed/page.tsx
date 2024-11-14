@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { Filter, Loader2, TrendingUp, Clock, ArrowUp } from 'lucide-react';
+import {  TrendingUp, Clock, ArrowUp } from 'lucide-react';
 import { RecipeGridSkeleton } from '../Components/recipes/RecipeSkeleton';
 import { FeedRecipeCard } from '../Components/recipes/FeedRecipeCard';
 import { useRecipeFeed, RecipeFeedProvider } from '../context/RecipeFeedContext';

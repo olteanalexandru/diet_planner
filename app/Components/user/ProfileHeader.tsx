@@ -5,7 +5,7 @@ import { FollowButton } from '../FollowButton';
 import { formatDistance } from 'date-fns';
 import Link from 'next/link';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { Edit2, Calendar, Users, BookOpen } from 'lucide-react';
+import { Edit2,  Users, BookOpen } from 'lucide-react';
 
 interface ProfileHeaderProps {
   profile: User;

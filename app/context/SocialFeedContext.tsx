@@ -2,8 +2,78 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useCallback } from 'react';
-import { ActivityGroup, ActivityFilter, SocialContextType, SocialFeedResponse } from '../types/social';
+import type { ActivityGroup, SocialContextType } from '../types';
 import { socialFeedService } from '../services/socialFeedService';
+
+type ActivityType = 
+  | 'generated'    
+  | 'created'     
+  | 'liked'       
+  | 'commented'    
+  | 'shared'       
+  | 'started_following'  
+  | 'achievement_earned'
+  | 'recipe_liked'
+  | 'recipe_created' 
+  | 'recipe_milestone';
+
+interface DBActivity {
+  id: string;
+  type: ActivityType;
+  userId: string;
+  targetUserId?: string | null;
+  recipeId?: string | null;
+  milestone?: number | null;
+  achievementId?: string | null;
+  createdAt: Date;
+  user?: {
+    name: string | null;
+    avatar: string | null;
+  } | null;
+  targetUser?: {
+    name: string | null;
+  } | null;
+  recipe?: {
+    title: string | null;
+    imageUrl: string | null;
+  } | null;
+  likes: Array<{ userId: string }>;
+  comments: Array<{
+    user: {
+      name: string | null;
+      avatar: string | null;
+    } | null;
+  }>;
+}
+
+interface SocialFeedFilters {
+  category: string;
+  sortBy: 'trending' | 'latest';
+  timeFrame?: 'today' | 'week' | 'month' | 'all';
+}
+
+interface ActivityInteractions {
+  likes: number;
+  comments: number;
+  hasLiked: boolean;
+  hasCommented?: boolean;
+}
+
+interface SocialActivity {
+  id: string;
+  type: ActivityType;
+  userId: string;
+  userName: string;
+  userImage?: string;
+  targetUserId?: string;
+  targetUserName?: string;
+  recipeId?: string;
+  recipeTitle?: string;
+  recipeImage?: string;
+  commentContent?: string;
+  timestamp: string | Date;
+  interactions: ActivityInteractions;
+}
 
 const SocialFeedContext = createContext<SocialContextType | undefined>(undefined);
 
@@ -23,12 +93,35 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
   const [activities, setActivities] = useState<ActivityGroup[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<ActivityFilter>({
+  const [filters, setFilters] = useState<SocialFeedFilters>({
     category: 'all',
     sortBy: 'trending'
   });
   const [hasMore, setHasMore] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+
+  const transformServiceActivity = (serviceActivity: DBActivity): SocialActivity => {
+    return {
+      id: serviceActivity.id,
+      type: serviceActivity.type,
+      userId: serviceActivity.userId,
+      userName: serviceActivity.user?.name || '',
+      userImage: serviceActivity.user?.avatar || undefined,
+      targetUserId: serviceActivity.targetUserId || undefined,
+      targetUserName: serviceActivity.targetUser?.name || undefined,
+      recipeId: serviceActivity.recipeId || undefined,
+      recipeTitle: serviceActivity.recipe?.title || undefined,
+      recipeImage: serviceActivity.recipe?.imageUrl || undefined,
+      timestamp: serviceActivity.createdAt,
+      interactions: {
+        likes: serviceActivity.likes.length,
+        comments: serviceActivity.comments.length,
+        hasLiked: serviceActivity.likes.some((like: { userId: string }) => like.userId === serviceActivity.userId),
+        hasCommented: serviceActivity.comments.some((comment: { user: { name: string | null } | null }) => 
+          comment.user?.name === serviceActivity.user?.name
+        )
+      }
+    };
+  };
 
   const fetchActivities = useCallback(async (page: number = 1) => {
     if (isLoading || (page > 1 && !hasMore)) return;
@@ -37,18 +130,39 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
     setError(null);
 
     try {
-      const response = await socialFeedService.getFeed(page, 10, filters);
+      const response = await socialFeedService.getFeed(page, 10, {
+        category: filters.category,
+        sortBy: filters.sortBy,
+        timeFrame: filters.timeFrame
+      });
       
       if (response.error) {
         throw new Error(response.error);
       }
 
       if (response.data) {
-        setActivities(prev => 
-          page === 1 ? response.data.activities : [...prev, ...response.data.activities]
+        // Transform and group activities by date
+        const transformedActivities = response.data.activities.map(activity => 
+          transformServiceActivity(activity as unknown as DBActivity)
+        );
+        
+        const groupedActivities = transformedActivities.reduce<ActivityGroup[]>((groups, activity) => {
+          const date = new Date(activity.timestamp).toLocaleDateString();
+          const existingGroup = groups.find(group => group.date === date);
+          
+          if (existingGroup) {
+            existingGroup.activities.push(activity);
+          } else {
+            groups.push({ date, activities: [activity] });
+          }
+          
+          return groups;
+        }, []);
+
+        setActivities(prevGroups => 
+          page === 1 ? groupedActivities : [...prevGroups, ...groupedActivities]
         );
         setHasMore(response.data.hasMore);
-        setCurrentPage(page);
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
@@ -61,8 +175,8 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
     try {
       const response = await socialFeedService.likeActivity(activityId);
       if (response.status === 200) {
-        setActivities((prev: ActivityGroup[]) => 
-          prev.map((group: ActivityGroup) => ({
+        setActivities((prevGroups: ActivityGroup[]) => 
+          prevGroups.map((group: ActivityGroup) => ({
             ...group,
             activities: group.activities.map(activity => 
               activity.id === activityId
@@ -88,8 +202,8 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
     try {
       const response = await socialFeedService.unlikeActivity(activityId);
       if (response.status === 200) {
-        setActivities((prev: ActivityGroup[]) => 
-          prev.map((group: ActivityGroup) => ({
+        setActivities((prevGroups: ActivityGroup[]) => 
+          prevGroups.map((group: ActivityGroup) => ({
             ...group,
             activities: group.activities.map(activity => 
               activity.id === activityId
@@ -115,8 +229,8 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
     try {
       const response = await socialFeedService.commentOnActivity(activityId, content);
       if (response.status === 200 && response.data) {
-        setActivities((prev: ActivityGroup[]) => 
-          prev.map((group: ActivityGroup) => ({
+        setActivities((prevGroups: ActivityGroup[]) => 
+          prevGroups.map((group: ActivityGroup) => ({
             ...group,
             activities: group.activities.map(activity => 
               activity.id === activityId
@@ -124,7 +238,8 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
                     ...activity,
                     interactions: {
                       ...activity.interactions,
-                      comments: activity.interactions.comments + 1
+                      comments: activity.interactions.comments + 1,
+                      hasCommented: true
                     }
                   }
                 : activity
@@ -149,11 +264,10 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
     }
   }, [fetchActivities]);
 
-  const handleSetFilters = useCallback((newFilters: Partial<ActivityFilter>) => {
+  const handleSetFilters = useCallback((newFilters: Partial<SocialFeedFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
     setActivities([]);
     setHasMore(true);
-    setCurrentPage(1);
   }, []);
 
   return (

@@ -72,7 +72,7 @@ export const FeedRecipeCard: React.FC<FeedRecipeCardProps> = ({
 
               {/* Tags */}
               <div className="flex gap-2">
-                {recipe.tags?.slice(0, 2).map(tag => (
+                {recipe.tags?.slice(0, 2).map((tag: string) => (
                   <span 
                     key={tag}
                     className="px-2 py-1 text-xs rounded-full bg-cyber-primary/10"

@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Recipe } from '../types';
 import { RecipeCard } from '../Components/recipes/RecipeCard';
 import { RecipeGridSkeleton } from '../Components/recipes/RecipeSkeleton';
 import { Loader2 } from 'lucide-react';
 
-export default function Recipes() {
+function RecipesContent() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchingMore, setFetchingMore] = useState(false);
@@ -112,5 +112,13 @@ export default function Recipes() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Recipes() {
+  return (
+    <Suspense fallback={<RecipeGridSkeleton />}>
+      <RecipesContent />
+    </Suspense>
   );
 }

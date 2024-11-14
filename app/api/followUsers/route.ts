@@ -59,7 +59,7 @@ export async function DELETE(req: NextRequest) {
 
     const { followingId } = await req.json();
 
-    const [deletedFollow, activity] = await prisma.$transaction([
+    const [ activity] = await prisma.$transaction([
       // Delete follow
       prisma.follow.delete({
         where: {

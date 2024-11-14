@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { FavoritesProvider } from './context/FavoritesContext';
-import { RecipeProvider } from './context/RecipeContext';
+// import { RecipeProvider } from './context/RecipeContext';
 import { CommentProvider } from './context/CommentContext';
 import { UserProvider } from '@auth0/nextjs-auth0/client';
 import { SocialFeedProvider } from './context/SocialFeedContext';
@@ -39,7 +39,7 @@ export default function RootLayout({
       <UserProvider>
         <ThemeProvider>
        
-          <RecipeProvider>
+        
             <CommentProvider>
               <FavoritesProvider>
                 <SocialFeedProvider>
@@ -59,7 +59,7 @@ export default function RootLayout({
                 </SocialFeedProvider>
               </FavoritesProvider>
             </CommentProvider>
-          </RecipeProvider>
+          
         </ThemeProvider>
 
         </UserProvider>

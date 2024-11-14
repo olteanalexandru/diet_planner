@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const { category = 'all', sort = 'trending', page = 1, tag = null } = await req.json();
 
     // Build where clause
-    let where: any = {};
+    const where: any = {};
     if (category !== 'all') {
       where.category = category;
     }

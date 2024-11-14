@@ -1,6 +1,6 @@
 export type SortOption = 'trending' | 'latest';
 export type Category = 'all' | 'quick' | 'vegetarian' | 'desserts' | 'healthy' | 'budget';
-
+import { Recipe } from './recipe';
 export interface RecipeFeedFilters {
   category?: Category;
   sort?: SortOption;

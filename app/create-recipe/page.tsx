@@ -4,7 +4,6 @@ import React from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { RecipeForm } from '../Components/recipes/RecipeForm';
 import { Loader2 } from 'lucide-react';
-import { Recipe } from '../types/index';
 import { RecipeFormProvider, useRecipeForm } from '../context/RecipeFormContext';
 
 function CreateRecipeContent() {

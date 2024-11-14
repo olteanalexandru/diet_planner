@@ -10,27 +10,27 @@ export async function POST(request: Request) {
 
     const whereConditions: Prisma.RecipeWhereInput = {
       AND: [
-        title ? {
+        title && {
           title: {
             contains: title,
             mode: Prisma.QueryMode.insensitive,
           },
-        } : undefined,
-        tags?.length > 0 ? {
+        },
+        tags?.length > 0 && {
           tags: {
             hasSome: tags
           }
-        } : undefined,
+        },
         {
           isPublished: true,
         },
-        diets?.length > 0 ? {
+        diets?.length > 0 && {
           dietaryInfo: {
             path: ['diets'],
             array_contains: diets,
           },
-        } : undefined,
-      ].filter(Boolean),
+        },
+      ].filter(Boolean) as Prisma.RecipeWhereInput[],
     };
 
     // First fetch recipes without ingredients filter
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     // Manually filter for ingredients if they exist
     if (ingredients?.length > 0) {
       recipes = recipes.filter(recipe => 
-        ingredients.some(ingredient =>
+        ingredients.some((ingredient: string) =>
           recipe.ingredients.some(recipeIngredient =>
             recipeIngredient.toLowerCase().includes(ingredient.toLowerCase())
           )

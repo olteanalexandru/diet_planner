@@ -32,3 +32,8 @@ export interface RecipeFeed {
   hasMore: boolean;
   total: number;
 }
+export interface ApiError {
+  message: string;
+  code: string;
+  statusCode: number;
+}

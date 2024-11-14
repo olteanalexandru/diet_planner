@@ -32,7 +32,7 @@ export default function Favorites() {
           >
             <div className="flex-shrink-0 w-20 h-20 overflow-hidden rounded-lg">
               <img
-                src={fav.imageUrl}
+                src={fav.imageUrl ?? ''}
                 alt={fav.title}
                 className="w-full h-full object-cover"
               />

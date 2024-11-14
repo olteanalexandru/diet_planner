@@ -26,7 +26,7 @@ export const useSocialFeed = (userId?: string) => {
       const page = reset ? 1 : state.page;
       const response = userId
         ? await socialFeedService.getUserActivities(userId, page)
-        : await socialFeedService.getFeed(page);
+        : await socialFeedService.getFeed(page, 10, { category: '', sortBy: '', timeFrame: '' });
 
       if (response.error) {
         throw new Error(response.error);

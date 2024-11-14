@@ -11,6 +11,19 @@ const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
+interface CommentResponse {
+  id: string;
+  content: string;
+  user: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  createdAt: string;
+  likes: number;
+  isLiked: boolean;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { activityId: string } }
@@ -40,23 +53,30 @@ export async function POST(
       include: {
         user: {
           select: {
+            id: true,
             name: true,
             avatar: true
           }
         },
+        likes: true,
       },
     });
 
-    const commentsCount = await prisma.activityComment.count({
-      where: { activityId },
-    });
+    const formattedComment: CommentResponse = {
+      id: comment.id,
+      content: comment.content,
+      user: {
+        id: comment.user.id,
+        name: comment.user.name || '',
+        avatar: comment.user.avatar || undefined
+      },
+      createdAt: comment.createdAt.toISOString(),
+      likes: 0,
+      isLiked: false
+    };
 
     return NextResponse.json({ 
-      comment: {
-        ...comment,
-        likes: [],
-      }, 
-      commentsCount 
+      comment: formattedComment
     });
   } catch (error) {
     console.error('Error adding comment:', error);
@@ -76,13 +96,14 @@ export async function GET(
     const { activityId } = params;
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = 5;
+    const limit = 10;
 
     const comments = await prisma.activityComment.findMany({
       where: { activityId },
       include: {
         user: {
           select: {
+            id: true,
             name: true,
             avatar: true
           }
@@ -91,21 +112,21 @@ export async function GET(
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
-      take: limit,
+      take: limit + 1, // Take one extra to determine if there are more
     });
 
-    const total = await prisma.activityComment.count({
-      where: { activityId },
-    });
+    const hasMore = comments.length > limit;
+    const paginatedComments = comments.slice(0, limit);
 
-    const formattedComments = comments.map(comment => ({
+    const formattedComments: CommentResponse[] = paginatedComments.map(comment => ({
       id: comment.id,
       content: comment.content,
-      userId: comment.userId,
-      userName: comment.user.name || '',
-      userImage: comment.user.avatar || undefined,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
+      user: {
+        id: comment.user.id,
+        name: comment.user.name || '',
+        avatar: comment.user.avatar || undefined
+      },
+      createdAt: comment.createdAt.toISOString(),
       likes: comment.likes.length,
       isLiked: session?.user 
         ? comment.likes.some(like => like.userId === session.user.sub)
@@ -114,7 +135,7 @@ export async function GET(
 
     return NextResponse.json({
       comments: formattedComments,
-      hasMore: total > page * limit,
+      hasMore,
     });
   } catch (error) {
     console.error('Error fetching comments:', error);

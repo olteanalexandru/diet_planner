@@ -1,55 +1,37 @@
 import { useEffect, useState } from 'react';
-import { Users } from 'lucide-react';
-import { useUser } from '@auth0/nextjs-auth0/client';
-import { User } from '../../types';
 import Link from 'next/link';
+import { Users } from 'lucide-react';
+import { FollowButton } from '../FollowButton';
+
+interface SuggestedUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  recipeCount: number;
+  followerCount: number;
+}
 
 export const SuggestedUsers = () => {
-  const { user } = useUser();
-  const [suggestions, setSuggestions] = useState<User[]>([]);
+  const [users, setUsers] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-    
-    const fetchSuggestions = async () => {
+    const fetchSuggestedUsers = async () => {
       try {
-        const response = await fetch('/api/users/suggestions');
+        const response = await fetch('/api/users/suggested');
         if (response.ok) {
           const data = await response.json();
-          setSuggestions(data.suggestions);
+          setUsers(data.users);
         }
       } catch (error) {
-        console.error('Error fetching suggestions:', error);
+        console.error('Error fetching suggested users:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSuggestions();
-  }, [user]);
-
-  const handleFollow = async (userId: string) => {
-    try {
-      const response = await fetch('/api/followUsers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ followingId: userId }),
-      });
-
-      if (response.ok) {
-        setSuggestions(prev =>
-          prev.map(suggestion =>
-            suggestion.id === userId
-              ? { ...suggestion, isFollowing: true }
-              : suggestion
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Error following user:', error);
-    }
-  };
+    fetchSuggestedUsers();
+  }, []);
 
   if (loading) {
     return (
@@ -60,11 +42,11 @@ export const SuggestedUsers = () => {
         </h2>
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-3 animate-pulse">
-              <div className="w-10 h-10 rounded-full bg-space-700" />
-              <div className="flex-grow">
+            <div key={i} className="animate-pulse flex items-center gap-3">
+              <div className="w-10 h-10 bg-space-700 rounded-full" />
+              <div className="flex-1 space-y-2">
                 <div className="h-4 bg-space-700 rounded w-24" />
-                <div className="h-3 bg-space-700 rounded w-16 mt-2" />
+                <div className="h-3 bg-space-700 rounded w-32" />
               </div>
             </div>
           ))}
@@ -73,7 +55,7 @@ export const SuggestedUsers = () => {
     );
   }
 
-  if (!suggestions.length) {
+  if (!users.length) {
     return null;
   }
 
@@ -84,42 +66,29 @@ export const SuggestedUsers = () => {
         Suggested Users
       </h2>
       <div className="space-y-4">
-        {suggestions.map((suggestion) => (
-          <div key={suggestion.id} className="flex items-center gap-3">
-            <Link 
-              href={`/profile/${suggestion.id}`}
-              className="flex-shrink-0"
-            >
-              <div className="w-10 h-10 rounded-full bg-cyber-primary/10 flex items-center justify-center">
-                <span className="text-lg">
-                  {suggestion.name?.[0].toUpperCase()}
-                </span>
-              </div>
+        {users.map((user) => (
+          <div key={user.id} className="flex items-center gap-3">
+            <Link href={`/profile/${user.id}`}>
+              <img
+                src={user.avatar || '/default-avatar.png'}
+                alt={user.name}
+                className="w-10 h-10 rounded-full object-cover"
+              />
             </Link>
-            
-            <div className="flex-grow min-w-0">
+            <div className="flex-1 min-w-0">
               <Link 
-                href={`/profile/${suggestion.id}`}
-                className="font-medium text-gray-300 hover:text-cyber-primary transition-colors duration-200 block truncate"
+                href={`/profile/${user.id}`}
+                className="font-medium hover:text-cyber-primary truncate block"
               >
-                {suggestion.name}
+                {user.name}
               </Link>
-              <p className="text-sm text-gray-400 truncate">
-                {suggestion._count?.recipes || 0} recipes
-              </p>
+              <div className="text-sm text-gray-400 flex items-center gap-2">
+                <span>{user.recipeCount} recipes</span>
+                <span>•</span>
+                <span>{user.followerCount} followers</span>
+              </div>
             </div>
-
-            <button
-              onClick={() => handleFollow(suggestion.id)}
-              disabled={suggestion.isFollowing}
-              className={`btn-cyber-outline py-1 px-3 text-sm ${
-                suggestion.isFollowing
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-cyber-primary hover:text-space-900'
-              }`}
-            >
-              {suggestion.isFollowing ? 'Following' : 'Follow'}
-            </button>
+            <FollowButton userId={user.id} />
           </div>
         ))}
       </div>

@@ -1,7 +1,20 @@
-'use client';
+ 'use client';
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { Recipe, RecipeContextType, SearchParams,  RecipeCount } from '../types/';
+import type { Recipe, RecipeCount } from '../types';
 import { recipeService } from '../services/recipeService';
+
+interface RecipeContextType {
+  recipes: Recipe[];
+  loading: boolean;
+  error: string | null;
+  fetchRecipes: (query: string) => Promise<void>;
+  fetchRecipeDetails: (title: string, cookingTime: number) => Promise<Recipe | null>;
+  createRecipe: (recipeData: Partial<Recipe>) => Promise<Recipe | null>;
+  updateRecipe: (id: string, recipeData: Partial<Recipe>) => Promise<Recipe | null>;
+  deleteRecipe: (id: string) => Promise<boolean>;
+  likeRecipe: (id: string) => Promise<void>;
+  unlikeRecipe: (id: string) => Promise<void>;
+}
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
 
@@ -14,21 +27,13 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(true);
     setError(null);
     try {
-      const searchParams: SearchParams = {
-        query,
-        page: 1,
-        limit: 20,
-        sortBy: 'date',
-        order: 'desc'
-      };
-
-      const response = await recipeService.getRecipes(searchParams);
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      if (response.data) {
-        setRecipes(response.data.recipes);
-      }
+      const response = await recipeService.getFeedRecipes(
+        'all', // category
+        'latest', // sort
+        1, // page
+        query // tag filter
+      );
+      setRecipes(response.recipes);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to fetch recipes');
       console.error('Error fetching recipes:', error);
@@ -41,15 +46,14 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(true);
     setError(null);
     try {
-      const searchParams: SearchParams = {
-        query: title,
-      };
-      const response = await recipeService.getRecipes(searchParams);
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      if (response.data && response.data.recipes.length > 0) {
-        return response.data.recipes.find((recipe: Recipe) => recipe.title === title && recipe.cookingTime === cookingTime) || null;
+      const response = await recipeService.getFeedRecipes(
+        'all',
+        'latest',
+        1,
+        title
+      );
+      if (response.recipes.length > 0) {
+        return response.recipes.find(recipe => recipe.title === title && recipe.cookingTime === cookingTime) || null;
       }
       return null;
     } catch (error) {
@@ -65,16 +69,9 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(true);
     setError(null);
     try {
-      const response = await recipeService.createRecipe(recipeData);
-      if (response.error) {
-        throw new Error(response.error);
-      }
-  if (response.data) {
-    const newRecipe = response.data || {} as Recipe;
-    setRecipes(prev => [newRecipe, ...prev]);
-    return newRecipe;
-  }
-      return null;
+      const newRecipe = await recipeService.createRecipe(recipeData);
+      setRecipes(prev => [newRecipe, ...prev]);
+      return newRecipe;
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to create recipe');
       console.error('Error creating recipe:', error);
@@ -88,18 +85,11 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(true);
     setError(null);
     try {
-      const response = await recipeService.updateRecipe(id, recipeData);
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      if (response.data) {
-        const updatedRecipe = response.data || {} as Recipe;
-        setRecipes(prev => prev.map(recipe => 
-          recipe.id === id ? updatedRecipe : recipe
-        ));
-        return updatedRecipe;
-      }
-      return null;
+      const updatedRecipe = await recipeService.updateRecipe(id, recipeData);
+      setRecipes(prev => prev.map(recipe => 
+        recipe.id === id ? updatedRecipe : recipe
+      ));
+      return updatedRecipe;
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update recipe');
       console.error('Error updating recipe:', error);
@@ -113,12 +103,9 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(true);
     setError(null);
     try {
-      const response = await recipeService.deleteRecipe(id);
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      setRecipes(prev => prev.filter(recipe => recipe.id !== id));
-      return true;
+      // Since deleteRecipe is not implemented in the service,
+      // we'll throw an error for now
+      throw new Error('Delete recipe functionality not implemented');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to delete recipe');
       console.error('Error deleting recipe:', error);
@@ -132,25 +119,20 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setError(null);
     try {
       const response = await recipeService.likeRecipe(id);
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      if (response.data) {
-        setRecipes(prev => prev.map(recipe => {
-          if (recipe.id === id) {
-            const updatedCount: RecipeCount = {
-              ...recipe._count,
-              likes: response.data ? response.data.likeCount : recipe._count.likes
-            };
-            return {
-              ...recipe,
-              isLiked: true,
-              _count: updatedCount
-            };
-          }
-          return recipe;
-        }));
-      }
+      setRecipes(prev => prev.map(recipe => {
+        if (recipe.id === id) {
+          const updatedCount: RecipeCount = {
+            ...recipe._count,
+            likes: response.likes
+          };
+          return {
+            ...recipe,
+            isLiked: response.isLiked,
+            _count: updatedCount
+          };
+        }
+        return recipe;
+      }));
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to like recipe');
       console.error('Error liking recipe:', error);
@@ -161,25 +143,20 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setError(null);
     try {
       const response = await recipeService.unlikeRecipe(id);
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      if (response.data) {
-        setRecipes(prev => prev.map(recipe => {
-          if (recipe.id === id) {
-            const updatedCount: RecipeCount = {
-              ...recipe._count,
-              likes: response.data ? response.data.likeCount : recipe._count.likes
-            };
-            return {
-              ...recipe,
-              isLiked: false,
-              _count: updatedCount
-            };
-          }
-          return recipe;
-        }));
-      }
+      setRecipes(prev => prev.map(recipe => {
+        if (recipe.id === id) {
+          const updatedCount: RecipeCount = {
+            ...recipe._count,
+            likes: response.likes
+          };
+          return {
+            ...recipe,
+            isLiked: response.isLiked,
+            _count: updatedCount
+          };
+        }
+        return recipe;
+      }));
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to unlike recipe');
       console.error('Error unliking recipe:', error);

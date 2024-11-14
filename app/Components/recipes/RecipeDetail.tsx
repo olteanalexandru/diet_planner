@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, Dispatch, SetStateAction } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
 import { Heart, Clock, Share2, ChefHat, Edit2, Save, Loader2, MessageCircle, PenTool, Bookmark } from 'lucide-react';
-import { Recipe, Comment as CommentType } from '../../types';
+import { Recipe } from '../../types';
 import Link from 'next/link';
 import { Comment } from '../Comment';
 import { useFavorites } from '../../context/FavoritesContext';
@@ -16,7 +16,7 @@ interface RecipeDetailProps {
   isGeneratedRecipe?: boolean;
   onLike?: () => Promise<void>;
   comments: any[];
-  setComments: (comments: any[]) => void;
+  setComments: Dispatch<SetStateAction<any[]>>;
   commentsLoading: boolean;
 }
 
@@ -236,7 +236,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
       if (!response.ok) throw new Error('Failed to add comment');
       
       const { comment } = await response.json();
-      setComments([comment, ...comments]);
+      setComments(prev => [comment, ...prev]);
       setNewComment('');
       
       // Update recipe comment count
@@ -362,7 +362,11 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                   </Link>
 
                   {user && user.sub !== recipe.authorId && (
-                    <FollowButton userId={recipe.authorId} />
+                    <FollowButton 
+                      userId={recipe.authorId} 
+                      isFollowing={recipe.isFollowing} 
+                      onToggle={() => {/* Add your toggle logic here */}} 
+                    />
                   )}
                 </div>
               )}
@@ -491,7 +495,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                           method: 'DELETE'
                         });
                         if (response.ok) {
-                          setComments(comments.filter(c => c.id !== commentId));
+                          setComments(prev => prev.filter(c => c.id !== commentId));
                           setRecipe(prev => ({
                             ...prev,
                             _count: {
@@ -510,7 +514,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                         });
                         if (response.ok) {
                           const { comment: updatedComment } = await response.json();
-                          setComments(comments.map(c => 
+                          setComments(prev => prev.map(c => 
                             c.id === commentId ? updatedComment : c
                           ));
                         }

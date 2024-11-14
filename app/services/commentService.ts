@@ -1,4 +1,4 @@
-import { Comment, ApiResponse, CommentResponse } from '../types/';
+import {  ApiResponse, CommentResponse } from '../types/';
 import { API_ENDPOINTS } from '../utils/constants';
 
 export const commentService = {

@@ -60,17 +60,17 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, isAIGenerated = 
   return (
     <article className="card-cyber overflow-hidden group">
       {/* Header with author info - only show for full recipes */}
-      {!isAIGenerated && recipe.author && (
+      {!isAIGenerated && recipe.authorId && (
         <div className="p-4 flex items-center justify-between">
           <Link
             href={`/profile/${recipe.authorId}`}
             className="flex items-center gap-2 hover:text-cyber-primary transition-colors"
           >
             <div className="w-10 h-10 rounded-full bg-cyber-primary/10 flex items-center justify-center">
-              {recipe.author?.name?.[0] || <ChefHat size={20} />}
+              <ChefHat size={20} />
             </div>
             <div>
-              <span className="font-medium">{recipe.author?.name}</span>
+              <span className="font-medium">Author</span>
               <p className="text-sm text-gray-400">
                 {formatDistance(new Date(recipe.createdAt), new Date(), { addSuffix: true })}
               </p>
@@ -79,7 +79,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, isAIGenerated = 
 
           {/* Recipe Tags */}
           <div className="flex gap-2">
-            {recipe.tags?.slice(0, 2).map(tag => (
+            {recipe.tags?.slice(0, 2).map((tag: string) => (
               <span 
                 key={tag}
                 className="px-2 py-1 text-xs rounded-full bg-space-700"

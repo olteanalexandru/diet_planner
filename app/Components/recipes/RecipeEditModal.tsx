@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Recipe } from '@/app/types';
 import { X, Loader2, Plus, Minus } from 'lucide-react';
 

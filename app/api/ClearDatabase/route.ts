@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     // Delete all data in the correct order to respect foreign key constraints
     await prisma.$transaction([
