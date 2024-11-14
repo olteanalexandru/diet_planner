@@ -8,6 +8,7 @@ import { UserProvider } from '@auth0/nextjs-auth0/client';
 import { SocialFeedProvider } from './context/SocialFeedContext';
 import Header from './Components/Header';
 import { ThemeProvider } from './context/ThemeContext';
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -38,6 +39,7 @@ export default function RootLayout({
     >
       <UserProvider>
         <ThemeProvider>
+            <SpeedInsights />
        
         
             <CommentProvider>
