@@ -18,7 +18,7 @@ const prismaClientSingleton = () => {
         query
       }: {
         operation: string;
-        model: string | null;
+        model?: string;
         args: any;
         query: (args: any) => Promise<any>;
       }) {
