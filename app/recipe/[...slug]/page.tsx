@@ -126,6 +126,7 @@ function RecipeContent() {
       comments={comments}
       setComments={setComments}
       commentsLoading={commentsLoading}
+      isPublished={recipe.isPublished}
     />
   );
 }

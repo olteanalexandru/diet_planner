@@ -18,6 +18,7 @@ interface RecipeDetailProps {
   comments: any[];
   setComments: Dispatch<SetStateAction<any[]>>;
   commentsLoading: boolean;
+  isPublished?: boolean; // Add this line
 }
 
 export const RecipeDetail: React.FC<RecipeDetailProps> = ({ 
@@ -439,103 +440,107 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
             </ol>
           </div>
 
-          {/* Comments Section */}
-          <div className="card-cyber p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">
-                Comments ({recipe._count?.comments || 0})
-              </h2>
-              <MessageCircle size={20} className="text-gray-400" />
-            </div>
+          {/* Only show comments section if recipe is published */}
+          {recipe.isPublished && (
+            <div className="comments-section">
+              <div className="card-cyber p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold">
+                    Comments ({recipe._count?.comments || 0})
+                  </h2>
+                  <MessageCircle size={20} className="text-gray-400" />
+                </div>
 
-            {user ? (
-              <>
-                <form onSubmit={handleCommentSubmit} className="mb-6">
-                  <div className="space-y-2">
-                    <textarea
-                      className="form-textarea w-full"
-                      placeholder="Add a comment..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      maxLength={MAX_COMMENT_LENGTH}
-                    />
-                    <div className="flex justify-between items-center text-sm text-gray-400">
-                      <span>
-                        {newComment.length}/{MAX_COMMENT_LENGTH} characters
-                      </span>
-                      <button
-                        type="submit"
-                        disabled={!newComment.trim()}
-                        className="btn-cyber px-4 py-2"
-                      >
-                        Post Comment
-                      </button>
-                    </div>
-                  </div>
-                </form>
+                {user ? (
+                  <>
+                    <form onSubmit={handleCommentSubmit} className="mb-6">
+                      <div className="space-y-2">
+                        <textarea
+                          className="form-textarea w-full"
+                          placeholder="Add a comment..."
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          maxLength={MAX_COMMENT_LENGTH}
+                        />
+                        <div className="flex justify-between items-center text-sm text-gray-400">
+                          <span>
+                            {newComment.length}/{MAX_COMMENT_LENGTH} characters
+                          </span>
+                          <button
+                            type="submit"
+                            disabled={!newComment.trim()}
+                            className="btn-cyber px-4 py-2"
+                          >
+                            Post Comment
+                          </button>
+                        </div>
+                      </div>
+                    </form>
 
-                {commentsLoading ? (
-                  <div className="text-center py-4 text-gray-400">
-                    Loading comments...
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {comments.map((comment) => (
-                      <Comment
-                        key={comment.id}
-                        comment={comment}
-                        onDelete={async (commentId) => {
-                          // Delete logic
-                          const response = await fetch(`/api/comments/${commentId}`, {
-                            method: 'DELETE'
-                          });
-                          if (response.ok) {
-                            setComments(prev => prev.filter(c => c.id !== commentId));
-                            setRecipe(prev => ({
-                              ...prev,
-                              _count: {
-                                ...prev._count,
-                                comments: (prev._count?.comments || 1) - 1
+                    {commentsLoading ? (
+                      <div className="text-center py-4 text-gray-400">
+                        Loading comments...
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {comments.map((comment) => (
+                          <Comment
+                            key={comment.id}
+                            comment={comment}
+                            onDelete={async (commentId) => {
+                              // Delete logic
+                              const response = await fetch(`/api/comments/${commentId}`, {
+                                method: 'DELETE'
+                              });
+                              if (response.ok) {
+                                setComments(prev => prev.filter(c => c.id !== commentId));
+                                setRecipe(prev => ({
+                                  ...prev,
+                                  _count: {
+                                    ...prev._count,
+                                    comments: (prev._count?.comments || 1) - 1
+                                  }
+                                }));
                               }
-                            }));
-                          }
-                        }}
-                        onEdit={async (commentId, content) => {
-                          // Edit logic
-                          const response = await fetch(`/api/comments/${commentId}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ content }),
-                          });
-                          if (response.ok) {
-                            const { comment: updatedComment } = await response.json();
-                            setComments(prev => prev.map(c => 
-                              c.id === commentId ? updatedComment : c
-                            ));
-                          }
-                        }}
-                        onLike={async (commentId) => {
-                          // Like logic
-                        }}
-                        onUnlike={async (commentId) => {
-                          // Unlike logic
-                        }}
-                      />
-                    ))}
+                            }}
+                            onEdit={async (commentId, content) => {
+                              // Edit logic
+                              const response = await fetch(`/api/comments/${commentId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ content }),
+                              });
+                              if (response.ok) {
+                                const { comment: updatedComment } = await response.json();
+                                setComments(prev => prev.map(c => 
+                                  c.id === commentId ? updatedComment : c
+                                ));
+                              }
+                            }}
+                            onLike={async (commentId) => {
+                              // Like logic
+                            }}
+                            onUnlike={async (commentId) => {
+                              // Unlike logic
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400 mb-4">
+                      Please sign in to leave a comment
+                    </p>
+                    <Link href="/api/auth/login" className="btn-cyber">
+                      Sign In
+                    </Link>
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-400 mb-4">
-                  Please sign in to leave a comment
-                </p>
-                <Link href="/api/auth/login" className="btn-cyber">
-                  Sign In
-                </Link>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Edit Modal */}
