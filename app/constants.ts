@@ -35,3 +35,5 @@ export const TAG_OPTIONS = [
   'Baking',
   'Grilling',
 ] as const;
+
+export const ITEMS_PER_PAGE = 12;

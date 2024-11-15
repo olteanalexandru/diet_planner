@@ -1,121 +1,41 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { debounce } from 'lodash';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 import { DIET_OPTIONS, TAG_OPTIONS } from '../constants';
+import { SearchProvider, useSearch } from '../context/SearchContext';
 
-interface SearchFilters {
-  title: string;
-  tags: string[];
-  diets: string[];
-  ingredients: string[];
-  page: number;
-  limit: number;
-}
-
-interface Recipe {
-  id: string;
-  title: string;
-  imageUrl: string;
-  description: string;
-  cookingTime: number;
-  difficulty: string;
-  ingredients: string[];
-  author: {
-    name: string;
-    image: string;
-  };
-}
-
-const ITEMS_PER_PAGE = 12;
-
-export default function SearchRecipePage() {
-  const [filters, setFilters] = useState<SearchFilters>({
-    title: '',
-    tags: [],
-    diets: [],
-    ingredients: [],
-    page: 1,
-    limit: ITEMS_PER_PAGE
-  });
-
-  const [searchResults, setSearchResults] = useState<Recipe[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [totalResults, setTotalResults] = useState(0);
+function SearchContent() {
   const router = useRouter();
+  const {
+    filters,
+    searchResults,
+    isLoading,
+    error,
+    totalResults,
+    trendingTags,
+    updateFilters,
+    addCustomTag,
+    removeTag,
+    addIngredient,
+    removeIngredient,
+  } = useSearch();
+
   const [customTag, setCustomTag] = useState('');
-  const [trendingTags, setTrendingTags] = useState<{ tag: string; count: number }[]>([]);
   const [ingredient, setIngredient] = useState('');
-
-  const debouncedSearch = debounce(async (newFilters: SearchFilters) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/recipes/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newFilters),
-      });
-
-      if (!response.ok) throw new Error('Search failed');
-
-      const data = await response.json();
-      setSearchResults(data.recipes);
-      setTotalResults(data.total);
-    } catch (err) {
-      setError('Failed to search recipes. Please try again.');
-      console.error('Search error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, 300);
-
-  useEffect(() => {
-    debouncedSearch(filters);
-    return () => debouncedSearch.cancel();
-  }, [filters]);
-
-  useEffect(() => {
-    const fetchTrendingTags = async () => {
-      try {
-        const response = await fetch('/api/recipes/trending-tags');
-        const data = await response.json();
-        setTrendingTags(data.tags);
-      } catch (err) {
-        console.error('Failed to fetch trending tags:', err);
-      }
-    };
-    fetchTrendingTags();
-  }, []);
-
-  const handleFilterChange = (
-    key: keyof SearchFilters,
-    value: string | string[] | number
-  ) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
-  };
 
   const handleAddCustomTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && customTag.trim()) {
-      const newTag = customTag.trim();
-      if (!filters.tags.includes(newTag)) {
-        handleFilterChange('tags', [...filters.tags, newTag]);
-      }
+      addCustomTag(customTag);
       setCustomTag('');
     }
   };
 
   const handleAddIngredient = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && ingredient.trim()) {
-      const newIngredient = ingredient.trim();
-      if (!filters.ingredients.includes(newIngredient)) {
-        handleFilterChange('ingredients', [...filters.ingredients, newIngredient]);
-      }
+      addIngredient(ingredient);
       setIngredient('');
     }
   };
@@ -136,7 +56,7 @@ export default function SearchRecipePage() {
                 type="text"
                 className="w-full p-2 border rounded-md"
                 value={filters.title}
-                onChange={(e) => handleFilterChange('title', e.target.value)}
+                onChange={(e) => updateFilters('title', e.target.value)}
                 placeholder="Search recipes..."
               />
             </div>
@@ -154,7 +74,7 @@ export default function SearchRecipePage() {
                         const newDiets = e.target.checked
                           ? [...filters.diets, diet]
                           : filters.diets.filter(d => d !== diet);
-                        handleFilterChange('diets', newDiets);
+                        updateFilters('diets', newDiets);
                       }}
                       className="mr-2"
                     />
@@ -177,7 +97,7 @@ export default function SearchRecipePage() {
                         const newTags = e.target.checked
                           ? [...filters.tags, tag]
                           : filters.tags.filter(t => t !== tag);
-                        handleFilterChange('tags', newTags);
+                        updateFilters('tags', newTags);
                       }}
                       className="mr-2"
                     />
@@ -198,7 +118,7 @@ export default function SearchRecipePage() {
                       const newTags = filters.tags.includes(tag)
                         ? filters.tags.filter(t => t !== tag)
                         : [...filters.tags, tag];
-                      handleFilterChange('tags', newTags);
+                      updateFilters('tags', newTags);
                     }}
                     className={`px-3 py-1 rounded-full text-sm ${
                       filters.tags.includes(tag)
@@ -235,10 +155,7 @@ export default function SearchRecipePage() {
                   >
                     {tag}
                     <button
-                      onClick={() => handleFilterChange(
-                        'tags',
-                        filters.tags.filter(t => t !== tag)
-                      )}
+                      onClick={() => removeTag(tag)}
                       className="hover:text-blue-200"
                     >
                       ×
@@ -266,10 +183,7 @@ export default function SearchRecipePage() {
                   >
                     {ingredient}
                     <button
-                      onClick={() => handleFilterChange(
-                        'ingredients',
-                        filters.ingredients.filter(i => i !== ingredient)
-                      )}
+                      onClick={() => removeIngredient(ingredient)}
                       className="hover:text-green-200"
                     >
                       ×
@@ -328,16 +242,16 @@ export default function SearchRecipePage() {
               </div>
 
               {/* Pagination */}
-              {totalResults > ITEMS_PER_PAGE && (
+              {totalResults > filters.limit && (
                 <div className="mt-6 flex justify-center">
                   <div className="flex gap-2">
                     {Array.from(
-                      { length: Math.ceil(totalResults / ITEMS_PER_PAGE) },
+                      { length: Math.ceil(totalResults / filters.limit) },
                       (_, i) => i + 1
                     ).map((page) => (
                       <button
                         key={page}
-                        onClick={() => handleFilterChange('page', page)}
+                        onClick={() => updateFilters('page', page)}
                         className={`px-3 py-1 rounded ${
                           filters.page === page
                             ? 'bg-blue-500 text-white'
@@ -355,5 +269,13 @@ export default function SearchRecipePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <SearchProvider>
+      <SearchContent />
+    </SearchProvider>
   );
 }

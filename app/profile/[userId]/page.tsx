@@ -1,96 +1,36 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams } from 'next/navigation';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { ProfileHeader } from '@/app/Components/profile/ProfileHeader';
-import { ProfileTabs } from '@/app/Components/profile/ProfileTabs';
-import { ProfileSkeleton } from '@/app/Components/profile/ProfileSkeleton';
-import { Recipe, User } from '@/app/types';
+import { ProfileHeader } from '../../Components/profile/ProfileHeader';
+import { ProfileTabs } from '../../Components/profile/ProfileTabs';
+import { ProfileSkeleton } from '../../Components/profile/ProfileSkeleton';
+import { ProfileProvider, useProfile } from '../../context/ProfileContext';
 
 type TabType = 'recipes' | 'favorites' | 'activity';
 
-export default function ProfilePage() {
+function ProfileContent() {
   const { userId } = useParams();
   const { user: currentUser } = useUser();
-  const [profile, setProfile] = useState<User | null>(null);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [stats, setStats] = useState({
-    recipesCount: 0,
-    followersCount: 0,
-    followingCount: 0,
-  });
-  const [activeTab, setActiveTab] = useState<TabType>('recipes');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    profileData: profile,
+    stats,
+    isFollowing,
+    loading,
+    error,
+    userRecipes: recipes,
+    toggleFollow,
+    activeTab,
+    setActiveTab,
+    fetchProfileData
+  } = useProfile();
 
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch profile data
-        const profileResponse = await fetch(`/api/users/${userId}`);
-        if (!profileResponse.ok) throw new Error('Failed to fetch profile');
-        const profileData = await profileResponse.json();
-        setProfile(profileData.user);
-
-        // Fetch recipes
-        const recipesResponse = await fetch(`/api/recipes?userId=${userId}`);
-        if (!recipesResponse.ok) throw new Error('Failed to fetch recipes');
-        const recipesData = await recipesResponse.json();
-        setRecipes(recipesData.recipes);
-
-        // Fetch follow status if logged in
-        if (currentUser?.sub && userId !== currentUser.sub) {
-          const followResponse = await fetch(`/api/followUsers?followingId=${userId}`);
-          if (followResponse.ok) {
-            const followData = await followResponse.json();
-            setIsFollowing(followData.isFollowing);
-          }
-        }
-
-        // Fetch stats
-        const statsResponse = await fetch(`/api/users/${userId}/stats`);
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats(statsData);
-        }
-      } catch (error) {
-        console.error('Error fetching profile data:', error);
-        setError('Failed to load profile');
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  React.useEffect(() => {
     if (userId) {
-      fetchProfileData();
+      fetchProfileData(userId as string);
     }
-  }, [userId, currentUser]);
-
-  const handleFollowToggle = async () => {
-    try {
-      const method = isFollowing ? 'DELETE' : 'POST';
-      const response = await fetch('/api/followUsers', {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ followingId: userId }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update follow status');
-
-      setIsFollowing(!isFollowing);
-      setStats(prev => ({
-        ...prev,
-        followersCount: prev.followersCount + (isFollowing ? -1 : 1),
-      }));
-    } catch (error) {
-      console.error('Error updating follow status:', error);
-    }
-  };
+  }, [userId, fetchProfileData]);
 
   if (loading) return <ProfileSkeleton />;
   
@@ -116,6 +56,18 @@ export default function ProfilePage() {
     );
   }
 
+  const handleFollowToggle = async () => {
+    try {
+      await toggleFollow(userId as string);
+    } catch (error) {
+      console.error('Error toggling follow status:', error);
+    }
+  };
+
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+  };
+
   return (
     <div className="page-container space-y-8">
       <ProfileHeader
@@ -128,8 +80,16 @@ export default function ProfilePage() {
       <ProfileTabs
         recipes={recipes}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
       />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <ProfileProvider>
+      <ProfileContent />
+    </ProfileProvider>
   );
 }
