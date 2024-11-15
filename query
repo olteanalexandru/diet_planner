@@ -1,150 +1,38 @@
-Project TODO List
-High Priority Issues
-Critical User Interactions
-
- Fix comment liking functionality
-
-Location: app\Components\Comment.tsx
-Issue: Users cannot like comments 
-Test case: Attempt to like own comment fails no api call to like comment is made. 
-
-
-
-Data Display Issues
-
- Fix description display bug
-
-Impact: Descriptions are not showing up for content
-Requires investigation of rendering logic
-
-
-
-Recipe System Core Issues
-
- Implement missing route handler
-
-Missing file: app/recipe/[...slug]/page.tsx
-Critical for recipe navigation
-
-
-
-Medium Priority Issues
-Recipe Dashboard Fixes
-
- Fix like count synchronization
-
-Issue: UI shows filled heart but count remains 0
-Location: Review Components/recipes/RecipeCard.tsx
-Check interaction with like API endpoints
-
-
-
-Draft Recipe Logic
-
- Implement proper draft recipe handling
-
- Hide draft recipes from recipe feed
- Remove draft recipes from custom recipes display
- Fix completion marking for draft recipes
- Review title change logic for drafts
-Files to check:
-
-app/api/recipes/feed/route.ts
-Components/recipes/RecipeManagement.tsx
-
-
-
-
-
-Content Organization
-
- Fix tags and category-comment logic
-
-Issue: Duplicate comments appearing across similar recipes
-Investigation needed:
-
-Review comment association logic
-Check timestamp handling
-Verify unique recipe identification
-
-
-
-
-
-Lower Priority Issues
-UI/UX Improvements
-
- Fix search recipe theming
-
-Location: app/search/page.tsx
-Ensure consistent theme application
-Check theme context integration
-
-
-
-Technical Debt
-Code Review Needed
-
- Audit comment system architecture
-
-Review app/api/comments structure
-Verify comment-recipe relationships
-Check comment metadata handling
-
-
-
-Documentation Updates
-
- Document known issues and workarounds
- Update API documentation for comment/like system
- Create troubleshooting guide for draft recipe issues
-
-Investigation Required
-Research Tasks
-
- Analyze comment duplication issue
-
-Log comment creation process
-Review database queries
-Check timestamp handling
-
-
- Investigate like count discrepancy
-
-Add logging to like operations
-Verify database updates
-Check client-side state management
-
-
-
-Testing Needed
-Test Cases to Implement
-
- Comment liking system
-
-Test self-likes
-Test multiple user scenarios
-Verify count updates
-
-
- Draft recipe visibility
-
-Test draft creation
-Verify feed filtering
-Check completion marking
-
-
- Theme consistency
-
-Test search page theming
-Verify theme persistence
-
-Files that need attention:
-
-api/comments/[commentId]/like/route.ts (missing)
-Components/Comment.tsx (like functionality incomplete)
-api/recipes/feed/route.ts (draft filtering)
-Components/recipes/RecipeManagement.tsx (draft handling)
-app/search/page.tsx (theming)
-Components/recipes/RecipeCard.tsx (like count sync)
-context/RecipeContext.tsx (state management)
+Error creating comment: PrismaClientKnownRequestError: 
+Invalid `prisma.comment.create()` invocation:
+
+
+An operation failed because it depends on one or more records that were required but not found. No 'User' record(s) (needed to inline the relation on 'Comment' record(s)) was found for a nested connect on one-to-many relation 'CommentToUser'.
+    at $n.handleRequestError (D:\projects\react-challenge\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (D:\projects\react-challenge\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (D:\projects\react-challenge\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (D:\projects\react-challenge\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async POST (webpack-internal:///(rsc)/./app/api/comments/route.ts:27:25)
+    at async D:\projects\react-challenge\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:55778
+    at async eO.execute (D:\projects\react-challenge\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:46527)
+    at async eO.handle (D:\projects\react-challenge\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:57112)
+    at async doRender (D:\projects\react-challenge\node_modules\next\dist\server\base-server.js:1345:42)
+    at async cacheEntry.responseCache.get.routeKind (D:\projects\react-challenge\node_modules\next\dist\server\base-server.js:1567:28)
+    at async DevServer.renderToResponseWithComponentsImpl (D:\projects\react-challenge\node_modules\next\dist\server\base-server.js:1475:28)
+    at async DevServer.renderPageComponent (D:\projects\react-challenge\node_modules\next\dist\server\base-server.js:1901:24)
+    at async DevServer.renderToResponseImpl (D:\projects\react-challenge\node_modules\next\dist\server\base-server.js:1939:32)
+    at async DevServer.pipeImpl (D:\projects\react-challenge\node_modules\next\dist\server\base-server.js:914:25)
+    at async NextNodeServer.handleCatchallRenderRequest (D:\projects\react-challenge\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (D:\projects\react-challenge\node_modules\next\dist\server\base-server.js:810:17)
+    at async D:\projects\react-challenge\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (D:\projects\react-challenge\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (D:\projects\react-challenge\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (D:\projects\react-challenge\node_modules\next\dist\server\lib\router-server.js:173:21)
+    at async handleRequest (D:\projects\react-challenge\node_modules\next\dist\server\lib\router-server.js:350:24)
+    at async requestHandlerImpl (D:\projects\react-challenge\node_modules\next\dist\server\lib\router-server.js:374:13)
+    at async Server.requestListener (D:\projects\react-challenge\node_modules\next\dist\server\lib\start-server.js:141:13) {
+  code: 'P2025',
+  clientVersion: '5.22.0',
+  meta: {
+    modelName: 'Comment',
+    cause: "No 'User' record(s) (needed to inline the relation on 'Comment' record(s)) was found for a nested connect on one-to-many relation 'CommentToUser'."
+  }
+}
+
+
+- users should be added to the database after logging in 

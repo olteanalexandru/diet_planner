@@ -10,6 +10,10 @@ const prisma = new PrismaClient();
 export const GET = handleAuth({
   callback: async (req: NextApiRequest, res: NextApiResponse) => {
     try {
+      // First, handle the Auth0 callback
+      await handleCallback(req, res);
+      
+      // Then get the session after Auth0 has processed everything
       const session = await getSession(req, res);
 
       if (session?.user) {
@@ -25,15 +29,15 @@ export const GET = handleAuth({
             email: session.user.email || '',
           },
         });
+
+        console.log('User upserted:', session.user.sub);
       }
 
-      // It's crucial to ensure that `handleCallback` is properly awaited
-      return await handleCallback(req, res);
+      // Return the response from handleCallback
+      return new Response(null, { status: 302, headers: { Location: '/' } });
 
     } catch (error) {
       console.error('Error in Auth0 callback:', error);
-
-      // Redirect to login on error
       return Response.redirect(
         new URL('/api/auth/login', new URL(process.env.AUTH0_BASE_URL || 'http://localhost:3000'))
       );
