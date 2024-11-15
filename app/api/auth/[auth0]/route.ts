@@ -11,8 +11,8 @@ export const GET = handleAuth({
   callback: async (req: NextApiRequest, res: NextApiResponse) => {
     try {
       // First, handle the Auth0 callback
-      await handleCallback(req, res);
-      
+   let awaitHandleCallback   =    await handleCallback(req, res);
+   awaitHandleCallback;
       // Then get the session after Auth0 has processed everything
       const session = await getSession(req, res);
 
@@ -34,7 +34,7 @@ export const GET = handleAuth({
       }
 
       // Return the response from handleCallback
-      return new Response(null, { status: 302, headers: { Location: '/' } });
+      return awaitHandleCallback;
 
     } catch (error) {
       console.error('Error in Auth0 callback:', error);
@@ -44,3 +44,8 @@ export const GET = handleAuth({
     }
   }
 });
+
+
+
+
+
