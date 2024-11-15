@@ -20,6 +20,7 @@ export const RecipeManagement: React.FC<RecipeEditModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recipe, setRecipe] = useState(initialRecipe);
+  const [isDraft, setIsDraft] = useState(initialRecipe.status === 'draft');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,11 +32,9 @@ export const RecipeManagement: React.FC<RecipeEditModalProps> = ({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: recipe.title,
-          ingredients: recipe.ingredients,
-          instructions: recipe.instructions,
-          cookingTime: Number(recipe.cookingTime),
-          imageUrl: recipe.imageUrl,
+          ...recipe,
+          status: isDraft ? 'draft' : 'published',
+          isPublished: !isDraft,
         }),
       });
 
@@ -108,6 +107,17 @@ export const RecipeManagement: React.FC<RecipeEditModalProps> = ({
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={isDraft}
+                  onChange={(e) => setIsDraft(e.target.checked)}
+                  className="form-checkbox"
+                />
+                <span>Save as draft</span>
+              </label>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-2">Title</label>
               <input

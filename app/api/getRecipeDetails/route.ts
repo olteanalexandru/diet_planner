@@ -153,81 +153,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // If recipe doesn't exist and there's no user session, return AI-generated recipe without saving
-      if (!userId) {
-        const completion = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [
-            { role: "system", content: "You are a helpful assistant that provides recipe details." },
-            { role: "user", content: `Provide detailed information for the recipe with title "${normalisedTitle}" and cooking time "${cookingTime}". Include the title, ingredients, and instructions. Return the response as a valid JSON object with the keys: id, title, ingredients, instructions, and cookingTime.` }
-          ],
-        });
-
-        let recipeDetails: Recipe;
-        try {
-          const responseContent = completion.choices[0].message?.content || '{}';
-          if (!isValidJSON(responseContent)) {
-            throw new Error('Invalid JSON format from OpenAI');
-          }
-          recipeDetails = JSON.parse(responseContent);
-        } catch (parseError) {
-          console.error('JSON parse error:', parseError);
-          throw new Error('Invalid JSON format from OpenAI');
-        }
-
-        // Get image if needed
-        let recipeImageUrl = imageUrl;
-        let recipeImageUrlLarge = '';
-
-        if (!imageUrl) {
-          try {
-            const response = await axios.get(`https://api.pexels.com/v1/search`, {
-              params: {
-                query: recipeDetails.title,
-                per_page: 1,
-              },
-              headers: {
-                Authorization: PEXELS_API_KEY,
-              },
-            });
-
-            recipeImageUrl = response.data.photos[0]?.src?.small || '';
-            recipeImageUrlLarge = response.data.photos[0]?.src?.large || '';
-          } catch (error) {
-            console.error(`Error fetching image for ${recipeDetails.title}:`, error);
-          }
-        }
-
-        // Return generated recipe without saving to database
-        return NextResponse.json({
-          recipe: {
-            ...recipeDetails,
-            id: `temp-${uuidv4()}`,
-            imageUrl: recipeImageUrl,
-            imageUrlLarge: recipeImageUrlLarge,
-            comments: [],
-            isOwner: false,
-          },
-        });
-      }
-
-      // If user is authenticated and recipe doesn't exist, create and save it
-      let user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-
-      console.log("user session data", user , userId , session?.user?.email, session?.user?.name);
-
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            id: userId,
-            email: session?.user?.email || session?.user?.name,
-            name: session?.user?.name || '',
-          },
-        });
-      }
-
+      // For non-existing recipes, always generate temporary recipe first
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
@@ -248,6 +174,7 @@ export async function POST(req: NextRequest) {
         throw new Error('Invalid JSON format from OpenAI');
       }
 
+      // Get image if needed
       let recipeImageUrl = imageUrl;
       let recipeImageUrlLarge = '';
 
@@ -270,38 +197,18 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const stableId = `${normalisedTitle.toLowerCase().replace(/\s+/g, '-')}-${uuidv4().slice(0, 8)}`;
-      
-      recipe = await prisma.recipe.create({
-        data: {
-          id: stableId,
-          title: recipeDetails.title,
-          ingredients: recipeDetails.ingredients,
-          instructions: recipeDetails.instructions,
-          cookingTime: parseInt(cookingTime),
-          imageUrl: recipeImageUrl,
-          imageUrlLarge: recipeImageUrlLarge,
-          author: { connect: { id: user.id } },
-        },
-        include: {
-          author: true,
-          comments: {
-            include: {
-              user: true,
-              likes: true,
-            },
-          },
-        },
-      });
-
-      // Create activity with correct type field
-      await createRecipeActivity(user.id, recipe.id, 'generated');
-
+      // Always return a temporary recipe, regardless of auth status
       return NextResponse.json({
         recipe: {
-          ...recipe,
+          ...recipeDetails,
+          id: `temp-${uuidv4()}`,
+          imageUrl: recipeImageUrl,
+          imageUrlLarge: recipeImageUrlLarge,
           comments: [],
-          isOwner: true,
+          isOwner: false,
+          status: 'generated',
+          isPublished: false,
+          authorId: null // Explicitly set to null for AI-generated recipes
         },
       });
 

@@ -4,7 +4,7 @@ import { User } from './types/user';
 import { DashboardContextType } from './types/context';
 import { ActivityGroup, ActivityFilter, SocialContextType, SocialFeedResponse } from './types/social';
 import  {ApiResponse , RecipesResponse , LikeResponse , PaginationState , LoadingState , RecipeFeed,ApiError}  from './types/api';
-
+import { SortOption } from './types/recipe-feed';
 interface FavouriteRecipeComponentProps {
   recipe: Recipe;
   favorites: Recipe[];
@@ -37,6 +37,7 @@ export type {
   PaginationState,
   LoadingState,
   RecipeFeed,
-  ApiError
+  ApiError,
+  SortOption,
 
 };

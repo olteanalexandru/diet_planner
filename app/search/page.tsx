@@ -42,19 +42,19 @@ function SearchContent() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-8">Search Recipes</h1>
+      <h1 className="text-3xl font-bold mb-8 text-[rgb(var(--foreground))]">Search Recipes</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Filters Sidebar */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="rounded-lg bg-white p-4 shadow">
-            <h2 className="font-semibold mb-4">Filters</h2>
+          <div className="rounded-lg glass p-4">
+            <h2 className="font-semibold mb-4 text-[rgb(var(--foreground))]">Filters</h2>
             
             {/* Search Input */}
             <div className="mb-4">
               <input
                 type="text"
-                className="w-full p-2 border rounded-md"
+                className="input-cyber w-full"
                 value={filters.title}
                 onChange={(e) => updateFilters('title', e.target.value)}
                 placeholder="Search recipes..."
@@ -122,8 +122,8 @@ function SearchContent() {
                     }}
                     className={`px-3 py-1 rounded-full text-sm ${
                       filters.tags.includes(tag)
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-700'
+                        ? 'bg-[rgb(var(--accent))] text-[rgb(var(--background))]'
+                        : 'bg-[rgb(var(--muted))] text-[rgb(var(--foreground))]'
                     }`}
                   >
                     #{tag} <span className="ml-2 text-xs text-gray-400">{count}</span>
@@ -198,7 +198,7 @@ function SearchContent() {
         {/* Results Section */}
         <div className="lg:col-span-3">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="alert alert-error">
               {error}
             </div>
           )}
@@ -214,7 +214,7 @@ function SearchContent() {
                   <div
                     key={recipe.id}
                     onClick={() => router.push(`/recipe/${recipe.id}`)}
-                    className="cursor-pointer bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                    className="cursor-pointer card-cyber overflow-hidden hover:shadow-lg transition-shadow"
                   >
                     <div className="relative h-48">
                       <Image
@@ -225,14 +225,17 @@ function SearchContent() {
                       />
                     </div>
                     <div className="p-4">
-                      <h3 className="font-semibold text-lg mb-2">{recipe.title}</h3>
-                      <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                      <h3 className="font-semibold text-lg mb-2 text-[rgb(var(--foreground))]">
+                        {recipe.title}
+                      </h3>
+                      <p className="text-[rgb(var(--muted))] text-sm mb-2 line-clamp-2">
                         {recipe.description}
                       </p>
-                      <div className="text-gray-600 text-sm mb-2">
-                        <strong>Ingredients:</strong> {recipe.ingredients.join(', ')}
+                      <div className="text-[rgb(var(--muted))] text-sm mb-2">
+                        <strong className="text-[rgb(var(--foreground))]">Ingredients:</strong> 
+                        {recipe.ingredients.join(', ')}
                       </div>
-                      <div className="flex justify-between items-center text-sm text-gray-500">
+                      <div className="flex justify-between items-center text-sm text-[rgb(var(--muted))]">
                         <span>{recipe.cookingTime} mins</span>
                         <span className="capitalize">{recipe.difficulty}</span>
                       </div>
@@ -254,8 +257,8 @@ function SearchContent() {
                         onClick={() => updateFilters('page', page)}
                         className={`px-3 py-1 rounded ${
                           filters.page === page
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-200'
+                            ? 'bg-[rgb(var(--accent))] text-[rgb(var(--background))]'
+                            : 'bg-[rgb(var(--muted))] text-[rgb(var(--foreground))]'
                         }`}
                       >
                         {page}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { Heart, Edit2, Trash2, X, Check } from 'lucide-react';
@@ -24,6 +23,8 @@ export const Comment: React.FC<CommentProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(comment.content);
   const [isLoading, setIsLoading] = useState(false);
+  const [localLikeCount, setLocalLikeCount] = useState(comment.likes);
+  const [isLocallyLiked, setIsLocallyLiked] = useState(comment.isLiked);
   const isEdited = new Date(comment.updatedAt).getTime() !== new Date(comment.createdAt).getTime();
 
   const handleSaveEdit = async () => {
@@ -52,16 +53,31 @@ export const Comment: React.FC<CommentProps> = ({
   };
 
   const handleLikeToggle = async () => {
-    if (!user) return;
+    if (!user || isLoading) return;
+    
     setIsLoading(true);
     try {
-      if (comment.isLiked) {
+      // Make the API call first
+      if (isLocallyLiked) {
+        await fetch(`/api/comments/${comment.id}/like`, {
+          method: 'DELETE',
+        });
         await onUnlike(comment.id);
       } else {
+        await fetch(`/api/comments/${comment.id}/like`, {
+          method: 'POST',
+        });
         await onLike(comment.id);
       }
+      
+      // Update local state after successful API call
+      setLocalLikeCount(prev => isLocallyLiked ? prev - 1 : prev + 1);
+      setIsLocallyLiked(!isLocallyLiked);
     } catch (error) {
       console.error('Error toggling like:', error);
+      // Revert local state on error
+      setIsLocallyLiked(comment.isLiked);
+      setLocalLikeCount(comment.likes);
     } finally {
       setIsLoading(false);
     }
@@ -142,9 +158,9 @@ export const Comment: React.FC<CommentProps> = ({
             >
               <Heart
                 size={16}
-                className={comment.isLiked ? 'text-cyber-primary fill-current' : ''}
+                className={isLocallyLiked ? 'text-cyber-primary fill-current' : ''}
               />
-              <span>{comment.likes}</span>
+              <span>{localLikeCount}</span>
             </button>
             <span className="text-gray-500 text-sm">
               {new Date(comment.createdAt).toLocaleDateString()}

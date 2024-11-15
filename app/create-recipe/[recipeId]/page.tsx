@@ -21,7 +21,7 @@ function EditRecipeContent() {
     if (recipeId) {
       fetchRecipe(recipeId as string);
     }
-  }, [recipeId, fetchRecipe]);
+  }, [recipeId, fetchRecipe.length > 0]);
 
   if (loading) {
     return (

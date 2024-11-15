@@ -64,8 +64,8 @@ function RecipeFeedContent() {
 
   return (
     <div className="min-h-screen">
-      {/* Fixed Header */}
-      <div className="sticky top-0 z-30 bg-space-800/80 backdrop-blur-lg border-b border-space-700">
+      {/* Fixed Header - lower z-index */}
+      <div className="sticky top-0 z-10 bg-space-800/80 backdrop-blur-lg border-b border-space-700">
         <div className="container mx-auto px-4">
           <div className="flex items-center h-16 gap-4">
             {/* Sort Buttons */}

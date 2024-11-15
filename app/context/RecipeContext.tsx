@@ -1,19 +1,25 @@
- 'use client';
+'use client';
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { Recipe, RecipeCount } from '../types';
 import { recipeService } from '../services/recipeService';
-
+import { SortOption } from '../types';
 interface RecipeContextType {
   recipes: Recipe[];
   loading: boolean;
   error: string | null;
-  fetchRecipes: (query: string) => Promise<void>;
+  fetchRecipes: (
+    query?: string,
+    includeDrafts?: boolean,
+    page?: number,
+    sort?: SortOption
+  ) => Promise<void>;
   fetchRecipeDetails: (title: string, cookingTime: number) => Promise<Recipe | null>;
   createRecipe: (recipeData: Partial<Recipe>) => Promise<Recipe | null>;
   updateRecipe: (id: string, recipeData: Partial<Recipe>) => Promise<Recipe | null>;
   deleteRecipe: (id: string) => Promise<boolean>;
   likeRecipe: (id: string) => Promise<void>;
   unlikeRecipe: (id: string) => Promise<void>;
+  updateDraftStatus: (id: string, isDraft: boolean) => Promise<Recipe | null>;
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
@@ -23,15 +29,20 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchRecipes = useCallback(async (query: string) => {
+  const fetchRecipes = useCallback(async (
+    query?: string,
+    includeDrafts = false,
+    page = 1,
+    sort: SortOption = 'latest'
+  ) => {
     setLoading(true);
     setError(null);
     try {
       const response = await recipeService.getFeedRecipes(
         'all', // category
-        'latest', // sort
-        1, // page
-        query // tag filter
+        sort as SortOption, // sort order
+        page, // page number
+        query ?? null // search query/tag filter
       );
       setRecipes(response.recipes);
     } catch (error) {
@@ -48,7 +59,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const response = await recipeService.getFeedRecipes(
         'all',
-        'latest',
+        'latest' as SortOption,
         1,
         title
       );
@@ -93,6 +104,27 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update recipe');
       console.error('Error updating recipe:', error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateDraftStatus = useCallback(async (id: string, isDraft: boolean): Promise<Recipe | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const updatedRecipe = await recipeService.updateRecipe(id, {
+        status: isDraft ? 'draft' : 'published',
+        isPublished: !isDraft
+      });
+      setRecipes(prev => prev.map(recipe => 
+        recipe.id === id ? updatedRecipe : recipe
+      ));
+      return updatedRecipe;
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update draft status');
+      console.error('Error updating draft status:', error);
       return null;
     } finally {
       setLoading(false);
@@ -173,7 +205,8 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     updateRecipe,
     deleteRecipe,
     likeRecipe,
-    unlikeRecipe
+    unlikeRecipe,
+    updateDraftStatus
   };
 
   return (

@@ -10,8 +10,13 @@ export async function POST(req: NextRequest) {
     const session = await getSession();
     const { category = 'all', sort = 'trending', page = 1, tag = null } = await req.json();
 
-    // Build where clause
-    const where: any = {};
+    // Build where clause to match schema fields
+    const where: any = {
+      status: 'published', // Match the default value in schema
+      isPublished: true,
+    };
+
+    // Add optional filters
     if (category !== 'all') {
       where.category = category;
     }
@@ -20,6 +25,14 @@ export async function POST(req: NextRequest) {
         has: tag
       };
     }
+
+    // Debug log to check the query
+    console.log('Recipe query:', {
+      where,
+      orderBy: sort === 'trending' ? { viewCount: 'desc' } : { createdAt: 'desc' },
+      skip: (page - 1) * ITEMS_PER_PAGE,
+      take: ITEMS_PER_PAGE,
+    });
 
     // Calculate trending score based on recent activity
     const oneWeekAgo = new Date();

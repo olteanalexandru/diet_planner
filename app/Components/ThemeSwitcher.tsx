@@ -32,10 +32,10 @@ const ThemeSwitcher = () => {
       {isOpen && (
         <>
           <div 
-            className="fixed inset-0" 
+            className="fixed inset-0 z-[100]" 
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-48 py-2 bg-space-800 rounded-lg shadow-xl border border-space-700">
+          <div className="absolute right-0 mt-2 w-48 py-2 bg-space-800 rounded-lg shadow-xl border border-space-700 z-[100]">
             {themeOptions.map((option) => (
               <button
                 key={option.value}
