@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Recipe } from '../../types';
 import { Loader2, Plus, X } from 'lucide-react';
+import { CATEGORIES, DIFFICULTY_LEVELS ,DIETARY_TAGS,CUISINE_TAGS } from '@/app/utils/constants';
 
 interface RecipeFormProps {
   initialData?: Partial<Recipe>;
@@ -10,43 +11,7 @@ interface RecipeFormProps {
   onDelete?: () => Promise<void>;
 }
 
-const CATEGORIES = [
-  { id: 'breakfast', name: 'Breakfast', icon: '🍳' },
-  { id: 'lunch', name: 'Lunch', icon: '🥪' },
-  { id: 'dinner', name: 'Dinner', icon: '🍽️' },
-  { id: 'dessert', name: 'Dessert', icon: '🍰' },
-  { id: 'snack', name: 'Snack', icon: '🍿' },
-  { id: 'beverage', name: 'Beverage', icon: '🥤' },
-] as const;
 
-const DIETARY_TAGS = [
-  'Vegetarian',
-  'Vegan',
-  'Gluten-Free',
-  'Dairy-Free',
-  'Low-Carb',
-  'Keto',
-  'Paleo',
-  'Mediterranean',
-];
-
-const CUISINE_TAGS = [
-  'Italian',
-  'Mexican',
-  'Chinese',
-  'Japanese',
-  'Indian',
-  'Thai',
-  'French',
-  'Mediterranean',
-  'American',
-];
-
-const DIFFICULTY_LEVELS = [
-  { id: 'easy', name: 'Easy', icon: '👶' },
-  { id: 'medium', name: 'Medium', icon: '👨‍🍳' },
-  { id: 'hard', name: 'Advanced', icon: '👨‍🔬' },
-];
 
 export const RecipeForm: React.FC<RecipeFormProps> = ({
   initialData,
@@ -96,7 +61,7 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
       };
 
       // Extract cuisine type from tags
-      const cuisineTag = formData.tags.find(tag => CUISINE_TAGS.includes(tag));
+      const cuisineTag = formData.tags.find(tag => CUISINE_TAGS.includes(tag as typeof CUISINE_TAGS[number]));
 
       const recipeData = {
         ...formData,

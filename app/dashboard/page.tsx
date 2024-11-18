@@ -109,7 +109,8 @@ function DashboardContent() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatsCard title="Custom Recipes" value={customRecipes.length} />
+        <StatsCard title="Custom Recipes" value={customRecipes.filter(
+          (recipe: Recipe) => recipe.status === 'published').length} />
         <StatsCard title="Favorite Recipes" value={favorites.length} />
         <StatsCard title="Followers" value={followersCount} />
         <StatsCard title="Following" value={followingCount} />
@@ -123,7 +124,9 @@ function DashboardContent() {
           </h2>
           {customRecipes.length > 0 ? (
             <div className="space-y-4">
-              {customRecipes.slice(0, 3).map((recipe: Recipe) => (
+              {customRecipes.slice(0, 3).filter(
+                (recipe: Recipe) => recipe.status === 'published'
+              ).map((recipe: Recipe) => (
                 <RecipeCard key={recipe.id} recipe={recipe} />
               ))}
             </div>

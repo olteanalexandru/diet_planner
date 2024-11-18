@@ -6,15 +6,8 @@ import {  TrendingUp, Clock, ArrowUp } from 'lucide-react';
 import { RecipeGridSkeleton } from '../Components/recipes/RecipeSkeleton';
 import { FeedRecipeCard } from '../Components/recipes/FeedRecipeCard';
 import { useRecipeFeed, RecipeFeedProvider } from '../context/RecipeFeedContext';
+import { CATEGORIES } from '@/app/utils/constants';
 
-const CATEGORIES = [
-  { id: 'all', name: 'All', icon: '🍽️' },
-  { id: 'quick', name: 'Quick & Easy', icon: '⚡' },
-  { id: 'vegetarian', name: 'Vegetarian', icon: '🥗' },
-  { id: 'desserts', name: 'Desserts', icon: '🍰' },
-  { id: 'healthy', name: 'Healthy', icon: '💪' },
-  { id: 'budget', name: 'Budget', icon: '💰' },
-] as const;
 
 function RecipeFeedContent() {
   const { 

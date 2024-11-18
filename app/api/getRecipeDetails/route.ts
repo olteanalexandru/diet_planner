@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
   while (attempts < MAX_RETRIES ) {
     try {
       // First, check if the recipe exists in the database
-      let recipe = await prisma.recipe.findFirst({
+      const recipe = await prisma.recipe.findFirst({
         where: {
           title: { equals: normalisedTitle, mode: 'insensitive' },
           cookingTime: parseInt(cookingTime),

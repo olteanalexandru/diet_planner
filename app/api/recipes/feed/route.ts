@@ -13,7 +13,6 @@ export async function POST(req: NextRequest) {
     // Build where clause to match schema fields
     const where: any = {
       status: 'published', // Match the default value in schema
-      isPublished: true,
     };
 
     // Add optional filters
