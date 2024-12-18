@@ -28,6 +28,12 @@ This Recipe Management Application is a full-stack web application built with Ne
 - Commenting system
 - Meal planning
 - Premium subscription features
+- Recipe Collections
+  - Create personal or public collections
+  - Organize recipes by theme or occasion
+  - Share collections with other users
+  - Add recipes to multiple collections
+  - Categorize collections (e.g., Breakfast, Dinner, Holidays)
 
 ## Technologies
 
@@ -96,6 +102,31 @@ Replace the placeholder values with your actual credentials.
 
 After starting the development server, open your browser and navigate to `http://localhost:3000`. You can now use the application to search for recipes, save favorites, plan meals, and interact with other users.
 
+### Working with Collections
+
+1. Creating a Collection:
+   - Navigate to your profile or the Collections page
+   - Click "Create Collection"
+   - Add a name, description, and choose privacy settings
+   - Select a category for your collection
+
+2. Adding Recipes to Collections:
+   - While viewing a recipe, click the "Add to Collection" button
+   - Select one or more collections to add the recipe to
+   - You can also create a new collection directly from this modal
+
+3. Managing Collections:
+   - View all your collections from your profile
+   - Edit collection details or privacy settings
+   - Remove recipes from collections
+   - Share collections with other users
+   - Delete collections you no longer need
+
+4. Discovering Collections:
+   - Browse public collections from other users
+   - Search collections by category or theme
+   - Follow users to see their latest collection updates
+
 ## API Routes
 
 - `/api/auth/*`: Auth0 authentication routes
@@ -105,6 +136,16 @@ After starting the development server, open your browser and navigate to `http:/
 - `/api/mealPlanning`: Manage meal plans
 - `/api/premium`: Handle premium subscriptions
 - `/api/socialFeed`: Get user activity feed
+- `/api/collections`: Manage recipe collections
+  - GET: List collections
+  - POST: Create new collection
+- `/api/collections/[collectionId]`: Individual collection operations
+  - GET: Get collection details
+  - PUT: Update collection
+  - DELETE: Delete collection
+- `/api/collections/[collectionId]/recipes`: Manage recipes in collections
+  - POST: Add recipe to collection
+  - DELETE: Remove recipe from collection
 
 ## Database Schema
 
@@ -115,6 +156,12 @@ The main entities in the database are:
 - Follow
 - MealPlan
 - Activity
+- Collection
+  - Properties: id, name, description, coverImage, isPublic, category, userId
+  - Relations: belongs to User, contains many Recipes through CollectionRecipe
+- CollectionRecipe
+  - Properties: id, collectionId, recipeId, addedAt
+  - Relations: connects Collections and Recipes
 
 Refer to the `prisma/schema.prisma` file for detailed schema information.
 
@@ -129,6 +176,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License.
-
-
-
