@@ -10,6 +10,7 @@ import { createUserUrl, createShareUrl } from '../../utils/url';
 import { FollowButton } from '../FollowButton';
 import { RecipeEditModal } from './RecipeEditModal';
 import { RecipeManagement } from './RecipeManagement';
+import AddToCollectionButton from './AddToCollectionButton';
 
 interface RecipeDetailProps {
   recipe: Recipe;
@@ -18,7 +19,7 @@ interface RecipeDetailProps {
   comments: any[];
   setComments: Dispatch<SetStateAction<any[]>>;
   commentsLoading: boolean;
-  isPublished?: boolean; // Add this line
+  isPublished?: boolean;
 }
 
 export const RecipeDetail: React.FC<RecipeDetailProps> = ({ 
@@ -73,10 +74,8 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
       const data = await response.json();
       
       if (saveDraftOnly) {
-        // If just saving as draft, go to recipe page
         router.push(`/recipe/${encodeURIComponent(data.recipe.title)}/${data.recipe.cookingTime}`);
       } else {
-        // If edit & publish, go to save-recipe page
         router.push(`/create-recipe/${data.recipe.id}`);
       }
     } catch (error) {
@@ -134,7 +133,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   
       if (!response.ok) {
         if (response.status === 400 && data.error === 'Already liked') {
-          // Handle already liked case by forcing a refresh of like status
           const statusResponse = await fetch(`/api/recipes/${recipe.id}/like/status`);
           if (statusResponse.ok) {
             const { isLiked, likes } = await statusResponse.json();
@@ -195,7 +193,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
       setComments(prev => [comment, ...prev]);
       setNewComment('');
       
-      // Update recipe comment count
       setRecipe(prev => ({
         ...prev,
         _count: {
@@ -215,7 +212,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
 
   return (
     <div className="page-container">
-      {/* Show save options at the top for AI-generated recipes */}
       {isGeneratedRecipe && (
         <div className="sticky top-0 z-10 bg-gradient-to-b from-background to-background/95 pb-4 mb-6">
           <div className="card-cyber bg-cyber-primary/5 p-4">
@@ -261,10 +257,8 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
         </div>
       )}
 
-      {/* Main recipe content */}
       <div className="max-w-4xl mx-auto p-6">
         <div className="space-y-6">
-          {/* Recipe Header */}
           <div className="flex justify-between items-start">
             <h1 className="text-3xl font-bold">{recipe.title}</h1>
 
@@ -287,9 +281,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
             </div>
           )}
 
-          {/* Recipe Info */}
           <div className="flex flex-col md:flex-row gap-8">
-            {/* Image Container */}
             <div className="w-full md:w-1/2 lg:w-2/5">
               <div className="card-cyber p-4 h-full">
                 <img
@@ -300,7 +292,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
               </div>
             </div>
 
-            {/* Recipe Info */}
             <div className="w-full md:w-1/2 lg:w-3/5 space-y-6">
               <div className="card-cyber p-6">
                 <div className="flex items-start justify-between gap-4">
@@ -337,6 +328,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                         className={isFavorite(recipe) ? 'fill-cyber-primary text-cyber-primary' : ''}
                       />
                     </button>
+                    {recipe.id && <AddToCollectionButton recipeId={recipe.id} />}
                     <button
                       onClick={handleShare}
                       className="btn-cyber-outline p-2"
@@ -347,14 +339,12 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                   </div>
                 </div>
 
-                {/* Description */}
                 {recipe.description && (
                   <div className="mt-4 text-gray-300">
                     <p>{recipe.description}</p>
                   </div>
                 )}
 
-                {/* Category and Tags */}
                 <div className="mt-4 space-y-3">
                   {recipe.category && (
                     <div className="flex items-center gap-2">
@@ -368,7 +358,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                   {recipe.tags && recipe.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       <span className="text-gray-400">Tags:</span>
-                      {recipe.tags.map((tag, index) => (
+                      {recipe.tags.map((tag: string, index) => (
                         <span
                           key={index}
                           className="px-2 py-1 bg-space-700 text-gray-300 rounded-md text-sm"
@@ -380,8 +370,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                   )}
                 </div>
 
-
-                {/* Author Info */}
                 {recipe.author && (
                   <div className="flex items-center justify-between mt-6 pt-6 border-t border-space-700">
                     <Link
@@ -412,7 +400,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
             </div>
           </div>
 
-          {/* Ingredients */}
           <div className="card-cyber p-6">
             <h2 className="text-xl font-semibold mb-4">Ingredients</h2>
             <ul className="space-y-2">
@@ -425,7 +412,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
             </ul>
           </div>
 
-          {/* Instructions */}
           <div className="card-cyber p-6">
             <h2 className="text-xl font-semibold mb-4">Instructions</h2>
             <ol className="space-y-4">
@@ -440,7 +426,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
             </ol>
           </div>
 
-          {/* Only show comments section if recipe is published */}
           {recipe.isPublished && (
             <div className="comments-section">
               <div className="card-cyber p-6">
@@ -488,7 +473,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                             key={comment.id}
                             comment={comment}
                             onDelete={async (commentId) => {
-                              // Delete logic
                               const response = await fetch(`/api/comments/${commentId}`, {
                                 method: 'DELETE'
                               });
@@ -504,7 +488,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                               }
                             }}
                             onEdit={async (commentId, content) => {
-                              // Edit logic
                               const response = await fetch(`/api/comments/${commentId}`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
@@ -543,7 +526,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
           )}
         </div>
 
-        {/* Edit Modal */}
         <RecipeManagement
           recipe={recipe}
           isOpen={isEditModalOpen}
@@ -551,7 +533,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
           onSuccess={handleEditSuccess}
         />
 
-        {/* Error Notification */}
         {error && (
           <div className="fixed bottom-4 right-4 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg">
             {error}

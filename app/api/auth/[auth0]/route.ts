@@ -10,10 +10,9 @@ const prisma = new PrismaClient();
 export const GET = handleAuth({
   callback: async (req: NextApiRequest, res: NextApiResponse) => {
     try {
-      // First, handle the Auth0 callback
-   const awaitHandleCallback  = await handleCallback(req, res);
- 
-    await handleCallback(req, res);
+      // Handle the Auth0 callback
+      const response = await handleCallback(req, res);
+      
       // Then get the session after Auth0 has processed everything
       const session = await getSession(req, res);
 
@@ -35,7 +34,7 @@ export const GET = handleAuth({
       }
 
       // Return the response from handleCallback
-      return awaitHandleCallback;
+      return response;
 
     } catch (error) {
       console.error('Error in Auth0 callback:', error);
@@ -45,8 +44,3 @@ export const GET = handleAuth({
     }
   }
 });
-
-
-
-
-

@@ -36,21 +36,53 @@ model User {
   mealPlans            MealPlan[]
   recipes              Recipe[]
   RecipeLike           RecipeLike[]
+  collections          Collection[]          // Added collections relation
+}
+
+model Collection {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  coverImage  String?
+  isPublic    Boolean    @default(true)
+  category    String     @default("other")
+  userId      String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  user        User       @relation(fields: [userId], references: [id])
+  recipes     CollectionRecipe[]
+
+  @@index([userId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model CollectionRecipe {
+  id           String     @id @default(cuid())
+  collectionId String
+  recipeId     String
+  addedAt      DateTime   @default(now())
+  collection   Collection @relation(fields: [collectionId], references: [id])
+  recipe       Recipe     @relation(fields: [recipeId], references: [id])
+
+  @@unique([collectionId, recipeId])
+  @@index([collectionId])
+  @@index([recipeId])
 }
 
 model Recipe {
-  id            String       @id @default(cuid())
+  id            String             @id @default(cuid())
   title         String
   description   String?
   ingredients   String[]
   instructions  String[]
   cookingTime   Int
-  servings      Int          @default(4)
-  difficulty    String       @default("medium")
-  category      String       @default("other")
+  servings      Int               @default(4)
+  difficulty    String            @default("medium")
+  category      String            @default("other")
   cuisine       String?
-  tags          String[]     @default([])
-  dietaryInfo   Json         @default("{}")
+  tags          String[]          @default([])
+  dietaryInfo   Json              @default("{}")
   prepTime      Int?
   totalTime     Int?
   calories      Int?
@@ -58,21 +90,22 @@ model Recipe {
   carbs         Float?
   fat           Float?
   rating        Float?
-  ratingCount   Int          @default(0)
+  ratingCount   Int               @default(0)
   imageUrl      String?
   imageUrlLarge String?
-  viewCount     Int          @default(0)
-  isPublished   Boolean      @default(true)
+  viewCount     Int               @default(0)
+  isPublished   Boolean           @default(true)
   authorId      String
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  status        String       @default("published") // Values: "published", "draft", "generated"
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  status        String            @default("published") // Values: "published", "draft", "generated"
   activities    Activity[]
   comments      Comment[]
   favorites     Favorite[]
   mealPlans     MealPlan[]
-  author        User         @relation(fields: [authorId], references: [id])
+  author        User              @relation(fields: [authorId], references: [id])
   likes         RecipeLike[]
+  collections   CollectionRecipe[] // Added collections relation
 
   @@index([authorId])
   @@index([category])
