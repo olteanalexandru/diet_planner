@@ -270,6 +270,28 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
     setHasMore(true);
   }, []);
 
+  const followUser = useCallback(async (userId: string) => {
+    try {
+      const response = await socialFeedService.followUser(userId);
+      if (response.status === 200) {
+        // Optionally, you can refresh the feed or update the state to reflect the follow action
+      }
+    } catch (error) {
+      setError('Failed to follow user');
+    }
+  }, []);
+
+  const unfollowUser = useCallback(async (userId: string) => {
+    try {
+      const response = await socialFeedService.unfollowUser(userId);
+      if (response.status === 200) {
+        // Optionally, you can refresh the feed or update the state to reflect the unfollow action
+      }
+    } catch (error) {
+      setError('Failed to unfollow user');
+    }
+  }, []);
+
   return (
     <SocialFeedContext.Provider
       value={{
@@ -283,7 +305,9 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
         likeActivity,
         unlikeActivity,
         addComment,
-        shareActivity
+        shareActivity,
+        followUser,
+        unfollowUser
       }}
     >
       {children}

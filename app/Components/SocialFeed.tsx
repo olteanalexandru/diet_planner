@@ -1,46 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import Link from 'next/link';
-
-interface Activity {
-  id: string;
-  userId: string;
-  userName: string;
-  action: string;
-  recipeId: string;
-  recipeTitle: string;
-  timestamp: string;
-}
+import { useSocialFeed } from '../context/SocialFeedContext';
+import { ActivityCard } from './social/ActivityCard';
+import { SuggestedUsers } from './social/SuggestedUsers';
 
 export const SocialFeed: React.FC = () => {
   const { user } = useUser();
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { activities, fetchActivities, isLoading, error, hasMore } = useSocialFeed();
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (user) {
-      fetchActivities();
+      fetchActivities(page);
     }
-  }, [user]);
+  }, [user, page, fetchActivities]);
 
-  const fetchActivities = async () => {
-    try {
-      const response = await fetch('/api/socialFeed');
-      if (!response.ok) {
-        throw new Error('Failed to fetch activities');
-      }
-      const data = await response.json();
-      setActivities(data.activities);
-    } catch (error) {
-      console.error('Error fetching activities:', error);
-      setError('Failed to load social feed');
-    } finally {
-      setLoading(false);
+  const loadMoreActivities = () => {
+    if (!isLoading && hasMore) {
+      setPage(prevPage => prevPage + 1);
     }
   };
 
-  if (loading) return <div>Loading social feed...</div>;
+  if (isLoading && page === 1) return <div>Loading social feed...</div>;
   if (error) return <div className="text-danger">{error}</div>;
 
   return (
@@ -50,18 +31,24 @@ export const SocialFeed: React.FC = () => {
         <p>No recent activities from your network.</p>
       ) : (
         <ul className="list-group">
-          {activities.map((activity) => (
-            <li key={activity.id} className="list-group-item">
-              <strong>{activity.userName}</strong> {activity.action}{' '}
-              <Link href={`/recipe/${activity.recipeId}`}>
-                {activity.recipeTitle}
-              </Link>
-              <br />
-              <small className="text-muted">{new Date(activity.timestamp).toLocaleString()}</small>
+          {activities.map((group) => (
+            <li key={group.date} className="list-group-item">
+              <h3>{group.date}</h3>
+              {group.activities.map((activity) => (
+                <ActivityCard key={activity.id} activity={activity} />
+              ))}
             </li>
           ))}
         </ul>
       )}
+      {hasMore && (
+        <div className="text-center mt-4">
+          <button onClick={loadMoreActivities} className="btn btn-primary">
+            Load More
+          </button>
+        </div>
+      )}
+      <SuggestedUsers />
     </div>
   );
 };

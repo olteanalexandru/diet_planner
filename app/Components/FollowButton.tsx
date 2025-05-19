@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { Loader2, UserPlus, UserMinus } from 'lucide-react';
-import { FollowButtonProps} from '../types';
+import { FollowButtonProps } from '../types';
+
 export const FollowButton: React.FC<FollowButtonProps> = ({ userId, onFollowToggle }) => {
   const { user } = useUser();
   const [isFollowing, setIsFollowing] = useState(false);
@@ -28,7 +29,7 @@ export const FollowButton: React.FC<FollowButtonProps> = ({ userId, onFollowTogg
 
   const handleFollowToggle = async () => {
     if (!user || isLoading) return;
-    
+
     setIsLoading(true);
     setError(null);
 
@@ -46,7 +47,7 @@ export const FollowButton: React.FC<FollowButtonProps> = ({ userId, onFollowTogg
 
       const newFollowStatus = !isFollowing;
       setIsFollowing(newFollowStatus);
-      
+
       if (onFollowToggle) {
         onFollowToggle(newFollowStatus);
       }

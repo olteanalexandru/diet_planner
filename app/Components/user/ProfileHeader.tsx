@@ -1,11 +1,11 @@
 import React from 'react';
-import { User} from '../../types';
+import { User } from '../../types';
 import { UserStatsCard } from './UserStats';
 import { FollowButton } from '../FollowButton';
 import { formatDistance } from 'date-fns';
 import Link from 'next/link';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { Edit2,  Users, BookOpen } from 'lucide-react';
+import { Edit2, Users, BookOpen } from 'lucide-react';
 
 interface ProfileHeaderProps {
   profile: User;
@@ -71,8 +71,3 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     </div>
   );
 };
-
-
-
-
-
