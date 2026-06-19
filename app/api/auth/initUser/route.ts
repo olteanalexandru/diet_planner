@@ -4,9 +4,6 @@ import prisma from '../../../lib/db';
 
 export async function POST() {
   try {
-    // Ensure database connection
-    await prisma.$connect();
-
     const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,7 +26,7 @@ export async function POST() {
         user = await prisma.user.create({
           data: {
             id: session.user.sub,
-            email: session.user.email || '',
+            email: session.user.email || null,
             name: session.user.name || '',
           }
         });
@@ -44,14 +41,11 @@ export async function POST() {
   } catch (error) {
     console.error('Error in initUser route:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Error initializing user',
         details: error instanceof Error ? error.message : 'Unknown error'
-      }, 
+      },
       { status: 500 }
     );
-  } finally {
-    // Ensure connection is properly closed
-    await prisma.$disconnect();
   }
 }

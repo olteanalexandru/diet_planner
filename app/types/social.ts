@@ -88,6 +88,8 @@ export interface SocialContextType {
   unlikeActivity: (activityId: string) => Promise<void>;
   addComment: (activityId: string, content: string) => Promise<void>;
   shareActivity: (recipeId: string) => Promise<void>;
+  followUser: (userId: string) => Promise<void>;
+  unfollowUser: (userId: string) => Promise<void>;
 }
 
 export interface ActivityCardProps {

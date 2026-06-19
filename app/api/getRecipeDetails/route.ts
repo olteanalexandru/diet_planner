@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import axios from 'axios';
 import { Recipe } from './../../types';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../lib/db';
 import { getSession } from '@auth0/nextjs-auth0';
 import { v4 as uuidv4 } from 'uuid';
 
-const prisma = new PrismaClient();
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });

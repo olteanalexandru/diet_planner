@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useCallback } from 'react';
 import type { ActivityGroup, SocialContextType } from '../types';
 import { socialFeedService } from '../services/socialFeedService';
+import { userService } from '../services/userService';
 
 type ActivityType = 
   | 'generated'    
@@ -272,10 +273,7 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
 
   const followUser = useCallback(async (userId: string) => {
     try {
-      const response = await socialFeedService.followUser(userId);
-      if (response.status === 200) {
-        // Optionally, you can refresh the feed or update the state to reflect the follow action
-      }
+      await userService.followUser(userId);
     } catch (error) {
       setError('Failed to follow user');
     }
@@ -283,10 +281,7 @@ export const SocialFeedProvider = ({ children }: SocialFeedProviderProps) => {
 
   const unfollowUser = useCallback(async (userId: string) => {
     try {
-      const response = await socialFeedService.unfollowUser(userId);
-      if (response.status === 200) {
-        // Optionally, you can refresh the feed or update the state to reflect the unfollow action
-      }
+      await userService.unfollowUser(userId);
     } catch (error) {
       setError('Failed to unfollow user');
     }

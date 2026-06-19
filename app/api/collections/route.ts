@@ -14,9 +14,14 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const isPublicOnly = searchParams.get('public') === 'true';
 
+    // Only the owner can see their own private collections; everyone else
+    // (including unfiltered browsing or requests for another user's collections)
+    // only sees public ones.
+    const restrictToPublic = isPublicOnly || !userId || userId !== session.user.sub;
+
     const where = {
       ...(userId ? { userId } : {}),
-      ...(isPublicOnly ? { isPublic: true } : {}),
+      ...(restrictToPublic ? { isPublic: true } : {}),
     };
 
     const collections = await prisma.collection.findMany({

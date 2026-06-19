@@ -71,7 +71,7 @@ class UserService {
     const response = await fetch('/api/followUsers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ followingId: userId }),
     });
     if (!response.ok) {
       throw new Error('Failed to follow user');
@@ -83,7 +83,7 @@ class UserService {
     const response = await fetch('/api/followUsers', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ followingId: userId }),
     });
     if (!response.ok) {
       throw new Error('Failed to unfollow user');

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
-
-const prisma = new PrismaClient();
+import prisma from '../../../lib/db';
 
 export async function GET(
   req: NextRequest,
@@ -80,6 +78,7 @@ export async function PUT(
         cookingTime: parseInt(cookingTime),
         imageUrl,
         isPublished,
+        status: isPublished ? 'published' : 'draft',
       },
       include: {
         author: {
@@ -187,6 +186,10 @@ export async function PATCH(
         ...updates,
         // Ensure status is only updated if explicitly provided
         status: updates.status || recipe.status,
+        // Keep isPublished in sync with status so search/feed listings agree
+        isPublished: updates.status
+          ? updates.status === 'published'
+          : recipe.isPublished,
       },
       include: {
         author: {
