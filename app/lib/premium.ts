@@ -5,14 +5,6 @@ export const FREE_PLAN_LIMITS = {
   maxCollections: 3,
 };
 
-export const PREMIUM_FEATURES = [
-  'Unlimited AI recipe generations',
-  'Access to premium-exclusive recipes',
-  'Unlimited recipe collections',
-  'Shopping list builder from your meal plan',
-  'Ad-free experience',
-];
-
 export function isPremiumUser(user: { subscriptionStatus?: string | null } | null | undefined) {
   return user?.subscriptionStatus === 'premium';
 }

@@ -1,11 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
 import { MealPlanner } from '../Components/MealPlanner';
+import { AiMealPlanGenerator } from '../Components/AiMealPlanGenerator';
 
 export default function MealPlanPage() {
+  const [refreshKey, setRefreshKey] = useState(0);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -15,7 +18,8 @@ export default function MealPlanPage() {
           Shopping List
         </Link>
       </div>
-      <MealPlanner />
+      <AiMealPlanGenerator onMealAdded={() => setRefreshKey(k => k + 1)} />
+      <MealPlanner key={refreshKey} />
     </div>
   );
 }

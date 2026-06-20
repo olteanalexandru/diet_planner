@@ -4,20 +4,13 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useSearchParams } from 'next/navigation';
 import { Check } from 'lucide-react';
+import { PREMIUM_FEATURES } from '../utils/constants';
 
 const FREE_FEATURES = [
-  '5 AI recipe generations per month',
+  '5 AI recipe generations & nutrition estimates per month',
   'Create and publish recipes',
   'Follow other cooks and like/comment',
   'Up to 3 recipe collections',
-];
-
-const PREMIUM_FEATURES = [
-  'Unlimited AI recipe generations',
-  'Access to premium-exclusive recipes',
-  'Unlimited recipe collections',
-  'Shopping list builder from your meal plan',
-  'Ad-free experience',
 ];
 
 function CheckoutResultBanner() {

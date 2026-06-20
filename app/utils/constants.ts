@@ -36,6 +36,16 @@ export const CUISINE_TAGS = [
   'American',
 ] as const;
 
+export const PREMIUM_FEATURES = [
+  'Unlimited AI recipe generations & nutrition estimates',
+  'AI weekly meal plan generator',
+  'AI chef assistant: substitutions, tips & pairings',
+  'Access to premium-exclusive recipes',
+  'Unlimited recipe collections',
+  'Shopping list builder from your meal plan',
+  'Ad-free experience',
+] as const;
+
 export const SORT_OPTIONS = [
   { value: 'latest', label: 'Latest' },
   { value: 'popular', label: 'Most Popular' },

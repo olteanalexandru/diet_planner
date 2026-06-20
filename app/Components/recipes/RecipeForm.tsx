@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { Recipe } from '../../types';
-import { Loader2, Plus, X } from 'lucide-react';
+import { Loader2, Plus, Sparkles, X } from 'lucide-react';
 import { CATEGORIES, DIFFICULTY_LEVELS ,DIETARY_TAGS,CUISINE_TAGS } from '@/app/utils/constants';
 
 interface RecipeFormProps {
@@ -19,6 +19,8 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [estimating, setEstimating] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     ingredients: initialData?.ingredients || [''],
@@ -86,6 +88,39 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
       setError(err instanceof Error ? err.message : 'Failed to save recipe');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEstimateNutrition = async () => {
+    const cleanIngredients = formData.ingredients.filter(i => i.trim());
+    if (cleanIngredients.length === 0) {
+      setEstimateError('Add at least one ingredient first');
+      return;
+    }
+
+    setEstimating(true);
+    setEstimateError(null);
+
+    try {
+      const response = await fetch('/api/ai/estimate-nutrition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients: cleanIngredients, servings: formData.servings }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to estimate nutrition');
+
+      setFormData(prev => ({
+        ...prev,
+        calories: data.calories,
+        protein: data.protein,
+        carbs: data.carbs,
+        fat: data.fat,
+      }));
+    } catch (err) {
+      setEstimateError(err instanceof Error ? err.message : 'Failed to estimate nutrition');
+    } finally {
+      setEstimating(false);
     }
   };
 
@@ -212,6 +247,31 @@ export const RecipeForm: React.FC<RecipeFormProps> = ({
           </select>
         </div>
       </div>
+
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-medium">Nutrition (per serving)</label>
+        <button
+          type="button"
+          onClick={handleEstimateNutrition}
+          disabled={estimating}
+          className="btn-cyber-outline flex items-center gap-2 text-sm py-1.5"
+        >
+          {estimating ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              Estimating...
+            </>
+          ) : (
+            <>
+              <Sparkles size={16} />
+              Estimate with AI
+            </>
+          )}
+        </button>
+      </div>
+      {estimateError && (
+        <p className="text-red-400 text-sm">{estimateError}</p>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
