@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/app/lib/db';
 import { getSession } from '@auth0/nextjs-auth0';
+import { FREE_PLAN_LIMITS, isPremiumUser } from '@/app/lib/premium';
 
 // Get all collections for a user
 export async function GET(request: NextRequest) {
@@ -60,6 +61,23 @@ export async function POST(request: NextRequest) {
         { error: 'Collection name is required' },
         { status: 400 }
       );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.sub },
+      select: { subscriptionStatus: true },
+    });
+
+    if (!isPremiumUser(user)) {
+      const collectionCount = await prisma.collection.count({
+        where: { userId: session.user.sub },
+      });
+      if (collectionCount >= FREE_PLAN_LIMITS.maxCollections) {
+        return NextResponse.json(
+          { error: `Free plan is limited to ${FREE_PLAN_LIMITS.maxCollections} collections. Upgrade to Premium for unlimited collections.` },
+          { status: 403 }
+        );
+      }
     }
 
     const collection = await prisma.collection.create({

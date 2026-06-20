@@ -1,7 +1,7 @@
-import React, { useState, Dispatch, SetStateAction } from 'react';
+import React, { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { Heart, Clock, Share2, ChefHat, Edit2, Save, Loader2, MessageCircle, PenTool, Bookmark } from 'lucide-react';
+import { Heart, Clock, Share2, ChefHat, Edit2, Save, Loader2, MessageCircle, PenTool, Bookmark, Star } from 'lucide-react';
 import { Recipe } from '../../types';
 import Link from 'next/link';
 import { Comment } from '../Comment';
@@ -11,6 +11,47 @@ import { FollowButton } from '../FollowButton';
 import { RecipeEditModal } from './RecipeEditModal';
 import { RecipeManagement } from './RecipeManagement';
 import AddToCollectionButton from './AddToCollectionButton';
+import { PremiumUpsell } from '../PremiumUpsell';
+
+interface StarRatingProps {
+  rating: number | null;
+  ratingCount: number;
+  userRating: number | null;
+  onRate: (value: number) => void;
+  disabled?: boolean;
+}
+
+const StarRating: React.FC<StarRatingProps> = ({ rating, ratingCount, userRating, onRate, disabled }) => {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const displayValue = hovered ?? userRating ?? 0;
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            type="button"
+            disabled={disabled}
+            onClick={() => onRate(value)}
+            onMouseEnter={() => setHovered(value)}
+            onMouseLeave={() => setHovered(null)}
+            className="disabled:cursor-not-allowed"
+            title={`Rate ${value} star${value > 1 ? 's' : ''}`}
+          >
+            <Star
+              size={18}
+              className={value <= displayValue ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}
+            />
+          </button>
+        ))}
+      </div>
+      <span className="text-sm text-gray-400">
+        {rating ? rating.toFixed(1) : 'No ratings'} {ratingCount > 0 && `(${ratingCount})`}
+      </span>
+    </div>
+  );
+};
 
 interface RecipeDetailProps {
   recipe: Recipe;
@@ -44,6 +85,47 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
+
+  const [ratingInfo, setRatingInfo] = useState<{ rating: number | null; ratingCount: number; userRating: number | null }>({
+    rating: initialRecipe.rating ?? null,
+    ratingCount: initialRecipe.ratingCount ?? 0,
+    userRating: null,
+  });
+  const [isRating, setIsRating] = useState(false);
+
+  useEffect(() => {
+    if (!recipe.id || recipe.id.startsWith('temp-')) return;
+    fetch(`/api/recipes/${recipe.id}/rate`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setRatingInfo(data);
+      })
+      .catch(() => {});
+  }, [recipe.id]);
+
+  const handleRate = async (value: number) => {
+    if (!user) {
+      router.push('/api/auth/login');
+      return;
+    }
+    if (!recipe.id || recipe.id.startsWith('temp-')) return;
+
+    setIsRating(true);
+    try {
+      const response = await fetch(`/api/recipes/${recipe.id}/rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+      if (!response.ok) throw new Error('Failed to submit rating');
+      const data = await response.json();
+      setRatingInfo(data);
+    } catch (error) {
+      setError('Failed to submit rating');
+    } finally {
+      setIsRating(false);
+    }
+  };
 
   const handleSaveRecipe = async (saveDraftOnly: boolean) => {
     if (!user) {
@@ -301,6 +383,15 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                       <Clock size={16} />
                       <span>{recipe.cookingTime} minutes</span>
                     </div>
+                    <div className="mt-2">
+                      <StarRating
+                        rating={ratingInfo.rating}
+                        ratingCount={ratingInfo.ratingCount}
+                        userRating={ratingInfo.userRating}
+                        onRate={handleRate}
+                        disabled={isRating}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex gap-2">
@@ -400,31 +491,40 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
             </div>
           </div>
 
-          <div className="card-cyber p-6">
-            <h2 className="text-xl font-semibold mb-4">Ingredients</h2>
-            <ul className="space-y-2">
-              {recipe.ingredients.map((ingredient: string, index: number) => (
-                <li key={index} className="flex items-center gap-2 text-gray-300">
-                  <span className="w-2 h-2 rounded-full bg-cyber-primary/50" />
-                  {ingredient}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {recipe.locked ? (
+            <PremiumUpsell
+              title="Premium recipe"
+              message="This recipe's ingredients and instructions are exclusive to Premium members."
+            />
+          ) : (
+            <>
+              <div className="card-cyber p-6">
+                <h2 className="text-xl font-semibold mb-4">Ingredients</h2>
+                <ul className="space-y-2">
+                  {recipe.ingredients.map((ingredient: string, index: number) => (
+                    <li key={index} className="flex items-center gap-2 text-gray-300">
+                      <span className="w-2 h-2 rounded-full bg-cyber-primary/50" />
+                      {ingredient}
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-          <div className="card-cyber p-6">
-            <h2 className="text-xl font-semibold mb-4">Instructions</h2>
-            <ol className="space-y-4">
-              {recipe.instructions.map((instruction: string, index: number) => (
-                <li key={index} className="flex gap-4 text-gray-300">
-                  <span className="flex-shrink-0 w-8 h-8 rounded-full bg-cyber-primary/10 flex items-center justify-center text-cyber-primary font-medium">
-                    {index + 1}
-                  </span>
-                  <p>{instruction}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
+              <div className="card-cyber p-6">
+                <h2 className="text-xl font-semibold mb-4">Instructions</h2>
+                <ol className="space-y-4">
+                  {recipe.instructions.map((instruction: string, index: number) => (
+                    <li key={index} className="flex gap-4 text-gray-300">
+                      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-cyber-primary/10 flex items-center justify-center text-cyber-primary font-medium">
+                        {index + 1}
+                      </span>
+                      <p>{instruction}</p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </>
+          )}
 
           {recipe.isPublished && (
             <div className="comments-section">

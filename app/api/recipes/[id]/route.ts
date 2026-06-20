@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
 import prisma from '../../../lib/db';
+import { applyPremiumLock, isPremiumUser } from '../../../lib/premium';
 
 export async function GET(
   req: NextRequest,
@@ -28,7 +29,12 @@ export async function GET(
       return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ recipe });
+    const viewer = await prisma.user.findUnique({
+      where: { id: session.user.sub },
+      select: { subscriptionStatus: true },
+    });
+
+    return NextResponse.json({ recipe: applyPremiumLock(recipe, session.user.sub, isPremiumUser(viewer)) });
   } catch (error) {
     console.error('Error fetching recipe:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

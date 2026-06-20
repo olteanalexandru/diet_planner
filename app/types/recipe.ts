@@ -42,6 +42,9 @@ export interface Recipe {
   isLiked?: boolean;
   isOwner?: boolean;
   comments?: Comment[];
+  isPremium?: boolean;
+  locked?: boolean;
+  userRating?: number;
 }
 
 export interface SearchParams {

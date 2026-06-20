@@ -54,6 +54,7 @@ export async function POST(
             type: 'recipe_liked',
             userId: session.user.sub,
             recipeId: params.id,
+            targetUserId: recipe.authorId !== session.user.sub ? recipe.authorId : null,
           },
         }),
       ]);

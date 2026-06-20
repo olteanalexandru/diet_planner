@@ -101,11 +101,18 @@ function DashboardContent() {
         <h1 className="text-3xl font-bold text-cyber-primary mb-4 md:mb-0">
           Welcome back, {user.name}!
         </h1>
-        <Link href="/create-recipe" 
-          className="btn-cyber inline-flex items-center gap-2">
-          <span className="i-lucide-plus w-5 h-5" />
-          Create New Recipe
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/meal-plan"
+            className="btn-cyber-outline inline-flex items-center gap-2">
+            <span className="i-lucide-calendar w-5 h-5" />
+            Meal Plan
+          </Link>
+          <Link href="/create-recipe"
+            className="btn-cyber inline-flex items-center gap-2">
+            <span className="i-lucide-plus w-5 h-5" />
+            Create New Recipe
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
