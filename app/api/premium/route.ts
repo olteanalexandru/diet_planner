@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
-import stripe from '../../lib/stripe';
+import { getStripeClient } from '../../lib/stripe';
 import prisma from '../../lib/db';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Already subscribed to premium' }, { status: 400 });
     }
 
+    const stripe = getStripeClient();
     let customerId = user.stripeCustomerId;
     if (!customerId) {
       const customer = await stripe.customers.create({

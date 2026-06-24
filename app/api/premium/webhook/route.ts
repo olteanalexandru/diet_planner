@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import stripe from '../../../lib/stripe';
+import { getStripeClient } from '../../../lib/stripe';
 import prisma from '../../../lib/db';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -40,8 +40,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
   }
 
+  let stripe: Stripe;
   let event: Stripe.Event;
   try {
+    stripe = getStripeClient();
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (error) {
     console.error('Stripe webhook signature verification failed:', error);
