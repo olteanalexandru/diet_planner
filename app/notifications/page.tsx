@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Heart, MessageCircle, UserPlus, UserMinus, Bell } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, UserMinus, Bell, Award } from 'lucide-react';
 
 interface NotificationActor {
   id: string;
@@ -15,6 +15,13 @@ interface NotificationRecipe {
   title: string;
 }
 
+interface NotificationAchievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+
 interface Notification {
   id: string;
   type: string;
@@ -22,6 +29,7 @@ interface Notification {
   readAt: string | null;
   user: NotificationActor;
   recipe: NotificationRecipe | null;
+  achievement: NotificationAchievement | null;
 }
 
 function describeNotification(notification: Notification) {
@@ -36,6 +44,14 @@ function describeNotification(notification: Notification) {
       return { icon: <UserPlus size={18} className="text-green-400" />, text: `${actor} started following you`, href: `/profile/${notification.user?.id}` };
     case 'unfollowed':
       return { icon: <UserMinus size={18} className="text-space-400" />, text: `${actor} unfollowed you`, href: `/profile/${notification.user?.id}` };
+    case 'achievement_earned':
+      return {
+        icon: <Award size={18} className="text-yellow-400" />,
+        text: notification.achievement
+          ? `Achievement unlocked: ${notification.achievement.title} ${notification.achievement.icon}`
+          : 'You unlocked a new achievement',
+        href: '/dashboard',
+      };
     default:
       return { icon: <Bell size={18} className="text-space-400" />, text: `${actor} interacted with your content`, href: '/dashboard' };
   }

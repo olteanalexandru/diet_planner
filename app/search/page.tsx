@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { DIET_OPTIONS, TAG_OPTIONS } from '../constants';
 import { SearchProvider, useSearch } from '../context/SearchContext';
 
@@ -17,6 +17,7 @@ function SearchContent() {
     totalResults,
     trendingTags,
     updateFilters,
+    applyFilters,
     addCustomTag,
     removeTag,
     addIngredient,
@@ -25,6 +26,36 @@ function SearchContent() {
 
   const [customTag, setCustomTag] = useState('');
   const [ingredient, setIngredient] = useState('');
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const handleAskAi = async () => {
+    if (!aiQuery.trim()) return;
+    setAiLoading(true);
+    setAiError(null);
+
+    try {
+      const response = await fetch('/api/ai/search-parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: aiQuery }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to parse search query');
+
+      applyFilters({
+        title: data.title || '',
+        tags: data.tags || [],
+        diets: data.diets || [],
+        ingredients: data.ingredients || [],
+      });
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Failed to parse search query');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleAddCustomTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && customTag.trim()) {
@@ -43,7 +74,34 @@ function SearchContent() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-8 text-[rgb(var(--foreground))]">Search Recipes</h1>
-      
+
+      <div className="card-cyber p-4 mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles size={18} className="text-cyber-primary" />
+          <h2 className="font-semibold text-[rgb(var(--foreground))]">Ask AI</h2>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={aiQuery}
+            onChange={(e) => setAiQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAskAi()}
+            placeholder="e.g. quick vegan dinners with chickpeas"
+            className="input-cyber w-full"
+          />
+          <button
+            type="button"
+            onClick={handleAskAi}
+            disabled={aiLoading || !aiQuery.trim()}
+            className="btn-cyber flex items-center gap-2 whitespace-nowrap"
+          >
+            {aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+            Ask AI
+          </button>
+        </div>
+        {aiError && <p className="text-red-400 text-sm mt-2">{aiError}</p>}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Filters Sidebar */}
         <div className="lg:col-span-1 space-y-6">

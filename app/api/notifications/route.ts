@@ -24,7 +24,21 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    return NextResponse.json({ notifications, unreadCount });
+    const achievementIds = notifications
+      .map((notification) => notification.achievementId)
+      .filter((id): id is string => !!id);
+
+    const achievements = achievementIds.length
+      ? await prisma.achievement.findMany({ where: { id: { in: achievementIds } } })
+      : [];
+    const achievementsById = new Map(achievements.map((achievement) => [achievement.id, achievement]));
+
+    const notificationsWithAchievements = notifications.map((notification) => ({
+      ...notification,
+      achievement: notification.achievementId ? achievementsById.get(notification.achievementId) ?? null : null,
+    }));
+
+    return NextResponse.json({ notifications: notificationsWithAchievements, unreadCount });
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });

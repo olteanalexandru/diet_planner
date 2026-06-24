@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
 import axios from 'axios';
 import prisma from '../../lib/db';
+import { checkRecipeAchievements } from '../../lib/achievements';
 
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 
@@ -150,6 +151,10 @@ export async function POST(req: NextRequest) {
         recipeId: recipe.id,
       }
     });
+
+    if (status === 'published') {
+      await checkRecipeAchievements(user.id);
+    }
 
     return NextResponse.json({ recipe }, { status: 201 });
   } catch (error) {

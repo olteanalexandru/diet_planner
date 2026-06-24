@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 import prisma from '../../lib/db';
+import { checkSocialButterflyAchievement } from '../../lib/achievements';
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,6 +42,8 @@ export async function POST(req: NextRequest) {
           },
         }),
       ]);
+
+      await checkSocialButterflyAchievement(followingId);
 
       return NextResponse.json({ follow, activity }, { status: 201 });
     } catch (error) {

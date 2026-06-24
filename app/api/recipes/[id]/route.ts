@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
 import prisma from '../../../lib/db';
 import { applyPremiumLock, isPremiumUser } from '../../../lib/premium';
+import { checkRecipeAchievements } from '../../../lib/achievements';
 
 export async function GET(
   req: NextRequest,
@@ -105,16 +106,17 @@ export async function PUT(
           recipeId: recipe.id,
         }
       });
+      await checkRecipeAchievements(session.user.sub);
     }
 
     return NextResponse.json({ recipe: updatedRecipe });
   } catch (error) {
     console.error('Error updating recipe:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Error updating recipe',
         details: error instanceof Error ? error.message : 'Unknown error'
-      }, 
+      },
       { status: 500 }
     );
   }
@@ -216,6 +218,7 @@ export async function PATCH(
           recipeId: recipe.id,
         }
       });
+      await checkRecipeAchievements(session.user.sub);
     }
 
     return NextResponse.json({ recipe: updatedRecipe });

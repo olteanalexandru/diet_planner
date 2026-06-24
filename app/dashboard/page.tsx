@@ -4,6 +4,7 @@ import React from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { Recipe } from '../types';
 import { RecipeCard } from '../Components/recipes/RecipeCard';
+import { AiRecommendations } from '../Components/AiRecommendations';
 import Link from 'next/link';
 import { DashboardProvider, useDashboard } from '../context/DashboardContext';
 
@@ -164,6 +165,8 @@ function DashboardContent() {
           )}
         </section>
       </div>
+
+      <AiRecommendations />
 
       <RecipesList recipes={customRecipes} />
     </div>

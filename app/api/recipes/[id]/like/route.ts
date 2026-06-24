@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 import prisma from '../../../../lib/db';
+import { checkPopularRecipeAchievement } from '../../../../lib/achievements';
 
 export async function POST(
   req: NextRequest,
@@ -68,6 +69,7 @@ export async function POST(
 
     // Return the up-to-date count
     const likes = await prisma.recipeLike.count({ where: { recipeId: params.id } });
+    await checkPopularRecipeAchievement(params.id);
     return NextResponse.json({ likes });
   } catch (error) {
     console.error('Error liking recipe:', error);
