@@ -5,6 +5,7 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import { useSearchParams } from 'next/navigation';
 import { Check } from 'lucide-react';
 import { PREMIUM_FEATURES } from '../utils/constants';
+import { useLanguage } from '../context/LanguageContext';
 
 const FREE_FEATURES = [
   '5 AI recipe generations & nutrition estimates per month',
@@ -16,18 +17,20 @@ const FREE_FEATURES = [
 function CheckoutResultBanner() {
   const searchParams = useSearchParams();
   const checkoutResult = searchParams.get('checkout');
+  const { t } = useLanguage();
 
   if (checkoutResult === 'success') {
-    return <p className="mt-4 text-green-400">Subscription activated! It may take a few seconds to reflect below.</p>;
+    return <p className="mt-4 text-green-400">{t('pricing.checkoutSuccess')}</p>;
   }
   if (checkoutResult === 'canceled') {
-    return <p className="mt-4 text-yellow-400">Checkout canceled.</p>;
+    return <p className="mt-4 text-yellow-400">{t('pricing.checkoutCanceled')}</p>;
   }
   return null;
 }
 
 function PricingContent() {
   const { user, isLoading: userLoading } = useUser();
+  const { t } = useLanguage();
 
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('free');
   const [loadingStatus, setLoadingStatus] = useState(true);
@@ -80,8 +83,8 @@ function PricingContent() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold text-white mb-2">Plans &amp; Pricing</h1>
-        <p className="text-space-400">Choose the plan that fits how you cook.</p>
+        <h1 className="text-3xl font-bold text-white mb-2">{t('pricing.title')}</h1>
+        <p className="text-space-400">{t('pricing.subtitle')}</p>
         <Suspense fallback={null}>
           <CheckoutResultBanner />
         </Suspense>
@@ -90,7 +93,7 @@ function PricingContent() {
 
       <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         <div className="bg-space-800 border border-space-700 rounded-xl p-8">
-          <h2 className="text-xl font-bold text-white mb-1">Free</h2>
+          <h2 className="text-xl font-bold text-white mb-1">{t('pricing.free.title')}</h2>
           <p className="text-3xl font-bold text-white mb-6">$0<span className="text-base text-space-400 font-normal">/month</span></p>
           <ul className="space-y-3 mb-8">
             {FREE_FEATURES.map((feature) => (
@@ -101,15 +104,15 @@ function PricingContent() {
             ))}
           </ul>
           {!userLoading && !isPremium && (
-            <div className="text-center text-space-400 py-2">Your current plan</div>
+            <div className="text-center text-space-400 py-2">{t('pricing.free.currentPlan')}</div>
           )}
         </div>
 
         <div className="bg-space-800 border-2 border-cyber-primary rounded-xl p-8 relative">
           <span className="absolute -top-3 right-6 bg-cyber-primary text-space-900 text-xs font-bold px-3 py-1 rounded-full">
-            PREMIUM
+            {t('pricing.premium.badge')}
           </span>
-          <h2 className="text-xl font-bold text-white mb-1">Premium</h2>
+          <h2 className="text-xl font-bold text-white mb-1">{t('pricing.premium.title')}</h2>
           <p className="text-3xl font-bold text-white mb-6">$9<span className="text-base text-space-400 font-normal">/month</span></p>
           <ul className="space-y-3 mb-8">
             {PREMIUM_FEATURES.map((feature) => (
@@ -125,17 +128,17 @@ function PricingContent() {
               href="/api/auth/login"
               className="block text-center w-full bg-cyber-primary hover:bg-cyber-primary/80 text-space-900 font-bold py-2 px-4 rounded-lg transition-colors"
             >
-              Log in to upgrade
+              {t('pricing.loginToUpgrade')}
             </a>
           ) : loadingStatus ? (
-            <div className="text-center text-space-400 py-2">Loading...</div>
+            <div className="text-center text-space-400 py-2">{t('pricing.loading')}</div>
           ) : isPremium ? (
             <button
               onClick={handleManageSubscription}
               disabled={actionLoading}
               className="w-full bg-space-700 hover:bg-space-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
             >
-              {actionLoading ? 'Opening...' : 'Manage subscription'}
+              {actionLoading ? t('pricing.opening') : t('pricing.manageSubscription')}
             </button>
           ) : (
             <button
@@ -143,7 +146,7 @@ function PricingContent() {
               disabled={actionLoading}
               className="w-full bg-cyber-primary hover:bg-cyber-primary/80 text-space-900 font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
             >
-              {actionLoading ? 'Redirecting...' : 'Upgrade to Premium'}
+              {actionLoading ? t('pricing.redirecting') : t('pricing.upgradeToPremium')}
             </button>
           )}
         </div>

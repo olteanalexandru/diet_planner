@@ -7,7 +7,9 @@ import { CommentProvider } from './context/CommentContext';
 import { UserProvider } from '@auth0/nextjs-auth0/client';
 import { SocialFeedProvider } from './context/SocialFeedContext';
 import Header from './Components/Header';
+import Footer from './Components/Footer';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const geistSans = localFont({
@@ -38,6 +40,7 @@ export default function RootLayout({
       bg-gradient-to-b min-h-screen font-geist-sans antialiased`}
     >
       <UserProvider>
+        <LanguageProvider>
         <ThemeProvider>
             <SpeedInsights />
        <RecipeProvider>
@@ -51,18 +54,14 @@ export default function RootLayout({
                       {children}
                     </div>
                   </main>
-                  <footer className="border-t border-space-700 bg-space-800/50 backdrop-blur-sm py-6">
-                    <div className="container mx-auto px-4 text-center text-space-300 text-sm">
-                      <p>© {new Date().getFullYear()} FutureRecipes. All rights reserved.</p>
-                    </div>
-                  </footer>
+                  <Footer />
                 </div>
                 </SocialFeedProvider>
               </FavoritesProvider>
             </CommentProvider>
           </RecipeProvider>
         </ThemeProvider>
-
+        </LanguageProvider>
         </UserProvider>
       </body>
     </html>

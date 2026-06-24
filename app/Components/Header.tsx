@@ -4,19 +4,22 @@ import Link from 'next/link';
 import { LoginButton } from './LoginButton';
 import { usePathname } from 'next/navigation';
 import ThemeSwitcher from './ThemeSwitcher';
+import LanguageSwitcher from './LanguageSwitcher';
+import { useLanguage } from '../context/LanguageContext';
 import {  ChefHat, Layout, Users, ScrollText, Bell, Sparkles } from 'lucide-react';
 
 const Header: React.FC = () => {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: <Layout size={18} /> },
-    { href: "/create-recipe", label: "Create Recipe", icon: <ChefHat size={18} /> },
-    { href: "/recipe-feed", label: "Recipe Feed", icon: <ScrollText size={18} /> },
-    { href: "/social-feed", label: "Social Feed", icon: <Users size={18} /> },
-    { href: "/search" , label: "Search Recipes", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5-5m2-2l-5-5-5 5-5-5m2 2l-5 5m5-5l5-5" /></svg> },
-    { href: "/notifications", label: "Notifications", icon: <Bell size={18} /> },
-    { href: "/pricing", label: "Pricing", icon: <Sparkles size={18} /> },
+    { href: "/dashboard", label: t('nav.dashboard'), icon: <Layout size={18} /> },
+    { href: "/create-recipe", label: t('nav.createRecipe'), icon: <ChefHat size={18} /> },
+    { href: "/recipe-feed", label: t('nav.recipeFeed'), icon: <ScrollText size={18} /> },
+    { href: "/social-feed", label: t('nav.socialFeed'), icon: <Users size={18} /> },
+    { href: "/search" , label: t('nav.search'), icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5-5m2-2l-5-5-5 5-5-5m2 2l-5 5m5-5l5-5" /></svg> },
+    { href: "/notifications", label: t('nav.notifications'), icon: <Bell size={18} /> },
+    { href: "/pricing", label: t('nav.pricing'), icon: <Sparkles size={18} /> },
   ];
 
   return (
@@ -47,6 +50,7 @@ const Header: React.FC = () => {
               </Link>
             ))}
             <div className="pl-6 border-l border-space-600 flex items-center gap-4">
+              <LanguageSwitcher />
               <ThemeSwitcher />
               <LoginButton />
             </div>
