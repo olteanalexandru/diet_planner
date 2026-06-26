@@ -273,7 +273,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
         {isCommenting && (
           <form onSubmit={handleCommentSubmit} className="space-y-2">
             <textarea
-              className="form-textarea w-full bg-space-800 border border-space-700 rounded-lg p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-cyber-primary focus:border-transparent"
+              className="form-textarea w-full bg-space-800 border border-space-700 rounded-lg p-2 text-space-50 placeholder-gray-400 focus:ring-2 focus:ring-cyber-primary focus:border-transparent"
               placeholder="Write a comment..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}

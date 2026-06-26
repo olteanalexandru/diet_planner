@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Sparkles, Loader2, Plus, Check, Clock } from 'lucide-react';
 import { DIETARY_TAGS, CUISINE_TAGS } from '../utils/constants';
 import { PremiumUpsell } from './PremiumUpsell';
+import { useLanguage } from '../context/LanguageContext';
+import type { TranslationKey } from '../translations';
 
 interface PlannedMeal {
   mealType: 'breakfast' | 'lunch' | 'dinner';
@@ -22,11 +24,18 @@ interface AiMealPlanGeneratorProps {
   onMealAdded?: () => void;
 }
 
+const MEAL_TYPE_KEYS: Record<PlannedMeal['mealType'], TranslationKey> = {
+  breakfast: 'mealPlan.aiGenerator.mealType.breakfast',
+  lunch: 'mealPlan.aiGenerator.mealType.lunch',
+  dinner: 'mealPlan.aiGenerator.mealType.dinner',
+};
+
 function mealKey(day: number, mealType: string) {
   return `${day}-${mealType}`;
 }
 
 export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMealAdded }) => {
+  const { t } = useLanguage();
   const [days, setDays] = useState(3);
   const [calorieTarget, setCalorieTarget] = useState('');
   const [dietaryPreference, setDietaryPreference] = useState('');
@@ -57,12 +66,12 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
       }
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to generate meal plan');
+      if (!response.ok) throw new Error(data.error || t('mealPlan.aiGenerator.errorGenerate'));
 
       setPlan(data.plan);
       setAddedKeys(new Set());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate meal plan');
+      setError(err instanceof Error ? err.message : t('mealPlan.aiGenerator.errorGenerate'));
     } finally {
       setLoading(false);
     }
@@ -80,7 +89,7 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
         body: JSON.stringify({ title: meal.title, cookingTime: meal.estimatedCookingTime || 30 }),
       });
       const detailsData = await detailsResponse.json();
-      if (!detailsResponse.ok) throw new Error(detailsData.error || 'Failed to generate recipe');
+      if (!detailsResponse.ok) throw new Error(detailsData.error || t('mealPlan.aiGenerator.errorRecipe'));
 
       let recipe = detailsData.recipe;
 
@@ -91,7 +100,7 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
           body: JSON.stringify({ ...recipe, status: 'draft', isPublished: false }),
         });
         const saveData = await saveResponse.json();
-        if (!saveResponse.ok) throw new Error(saveData.error || 'Failed to save recipe');
+        if (!saveResponse.ok) throw new Error(saveData.error || t('mealPlan.aiGenerator.errorSave'));
         recipe = saveData.recipe;
       }
 
@@ -103,12 +112,12 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: date.toISOString(), recipeId: recipe.id }),
       });
-      if (!planResponse.ok) throw new Error('Failed to add to meal plan');
+      if (!planResponse.ok) throw new Error(t('mealPlan.aiGenerator.errorAdd'));
 
       setAddedKeys(prev => new Set(prev).add(key));
       onMealAdded?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add meal to plan');
+      setError(err instanceof Error ? err.message : t('mealPlan.aiGenerator.errorAdd'));
     } finally {
       setAddingKey(null);
     }
@@ -117,8 +126,8 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
   if (locked) {
     return (
       <PremiumUpsell
-        title="AI Meal Plan Generator"
-        message="Upgrade to Premium to generate a full weekly meal plan tailored to your calorie target, diet, and cuisine preferences."
+        title={t('mealPlan.aiGenerator.title')}
+        message={t('mealPlan.aiGenerator.upsellMessage')}
       />
     );
   }
@@ -127,12 +136,12 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
     <div className="card-cyber p-6 mb-8">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles size={20} className="text-cyber-primary" />
-        <h2 className="text-xl font-semibold">AI Meal Plan Generator</h2>
+        <h2 className="text-xl font-semibold">{t('mealPlan.aiGenerator.title')}</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Days</label>
+          <label className="block text-sm font-medium mb-2">{t('mealPlan.aiGenerator.days')}</label>
           <input
             type="number"
             min={1}
@@ -143,37 +152,37 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Calorie Target</label>
+          <label className="block text-sm font-medium mb-2">{t('mealPlan.aiGenerator.calorieTarget')}</label>
           <input
             type="number"
             min={0}
             value={calorieTarget}
             onChange={e => setCalorieTarget(e.target.value)}
             className="input-cyber w-full"
-            placeholder="Optional"
+            placeholder={t('mealPlan.aiGenerator.optional')}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Diet</label>
+          <label className="block text-sm font-medium mb-2">{t('mealPlan.aiGenerator.diet')}</label>
           <select
             value={dietaryPreference}
             onChange={e => setDietaryPreference(e.target.value)}
             className="input-cyber w-full"
           >
-            <option value="">Any</option>
+            <option value="">{t('mealPlan.aiGenerator.any')}</option>
             {DIETARY_TAGS.map(tag => (
               <option key={tag} value={tag}>{tag}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-2">Cuisine</label>
+          <label className="block text-sm font-medium mb-2">{t('mealPlan.aiGenerator.cuisine')}</label>
           <select
             value={cuisinePreference}
             onChange={e => setCuisinePreference(e.target.value)}
             className="input-cyber w-full"
           >
-            <option value="">Any</option>
+            <option value="">{t('mealPlan.aiGenerator.any')}</option>
             {CUISINE_TAGS.map(tag => (
               <option key={tag} value={tag}>{tag}</option>
             ))}
@@ -190,12 +199,12 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
         {loading ? (
           <>
             <Loader2 size={16} className="animate-spin" />
-            Generating...
+            {t('mealPlan.aiGenerator.generating')}
           </>
         ) : (
           <>
             <Sparkles size={16} />
-            Generate Plan
+            {t('mealPlan.aiGenerator.generate')}
           </>
         )}
       </button>
@@ -206,7 +215,7 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
         <div className="mt-6 space-y-6">
           {plan.map(planDay => (
             <div key={planDay.day}>
-              <h3 className="text-lg font-medium text-cyber-primary mb-3">Day {planDay.day}</h3>
+              <h3 className="text-lg font-medium text-cyber-primary mb-3">{t('mealPlan.aiGenerator.day', { day: planDay.day })}</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {planDay.meals.map(meal => {
                   const key = mealKey(planDay.day, meal.mealType);
@@ -214,15 +223,15 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
                   const isAdded = addedKeys.has(key);
                   return (
                     <div key={key} className="border border-space-700 rounded-lg p-4">
-                      <span className="text-xs uppercase text-space-400">{meal.mealType}</span>
-                      <h4 className="font-medium text-white mt-1">{meal.title}</h4>
+                      <span className="text-xs uppercase text-space-400">{t(MEAL_TYPE_KEYS[meal.mealType])}</span>
+                      <h4 className="font-medium text-space-50 mt-1">{meal.title}</h4>
                       <p className="text-sm text-gray-400 mt-1">{meal.description}</p>
                       <div className="flex items-center gap-3 mt-2 text-xs text-space-400">
-                        {!!meal.estimatedCalories && <span>{meal.estimatedCalories} kcal</span>}
+                        {!!meal.estimatedCalories && <span>{meal.estimatedCalories} {t('mealPlan.aiGenerator.kcal')}</span>}
                         {!!meal.estimatedCookingTime && (
                           <span className="flex items-center gap-1">
                             <Clock size={12} />
-                            {meal.estimatedCookingTime} min
+                            {meal.estimatedCookingTime} {t('mealPlan.aiGenerator.min')}
                           </span>
                         )}
                       </div>
@@ -235,17 +244,17 @@ export const AiMealPlanGenerator: React.FC<AiMealPlanGeneratorProps> = ({ onMeal
                         {isAdded ? (
                           <>
                             <Check size={14} />
-                            Added
+                            {t('mealPlan.aiGenerator.added')}
                           </>
                         ) : isAdding ? (
                           <>
                             <Loader2 size={14} className="animate-spin" />
-                            Adding...
+                            {t('mealPlan.aiGenerator.adding')}
                           </>
                         ) : (
                           <>
                             <Plus size={14} />
-                            Add to Plan
+                            {t('mealPlan.aiGenerator.addToPlan')}
                           </>
                         )}
                       </button>

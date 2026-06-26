@@ -9,16 +9,15 @@ export const LoginButton: React.FC = () => {
   const { user, error, isLoading } = useUser();
   const { t } = useLanguage();
 
-  if (isLoading) return <div>{t('auth.loading')}</div>;
-  if (error) return <div>Error: {error.message}</div>;
+  if (isLoading) return <div className="text-sm text-space-400">{t('auth.loading')}</div>;
+  if (error) return <div className="text-sm text-red-400">Error: {error.message}</div>;
 
   if (user) {
     return (
-      <div className="d-flex align-items-center">
-        <span className="me-2">{t('auth.welcome', { name: user.name || '' })}</span>
-        {/* <Link href="/api/auth/logout" className="btn btn-outline-light"> */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-space-300 hidden lg:inline">{t('auth.welcome', { name: user.name || '' })}</span>
         <button
-          className="btn btn-outline-light"
+          className="btn-cyber-outline px-4 py-1.5 text-sm"
           onClick={() => {
             window.location.href = '/api/auth/logout';
           }}
@@ -30,7 +29,7 @@ export const LoginButton: React.FC = () => {
   }
 
   return (
-    <Link href="/api/auth/login" className="btn btn-outline-light">
+    <Link href="/api/auth/login" className="btn-cyber-outline px-4 py-1.5 text-sm">
       {t('auth.login')}
     </Link>
   );

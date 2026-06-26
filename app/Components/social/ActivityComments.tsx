@@ -123,7 +123,7 @@ export const ActivityComments: React.FC<ActivityCommentsProps> = ({
 
       <form onSubmit={handleSubmit} className="mb-6">
         <textarea
-          className="form-textarea w-full mb-2 bg-space-800 border border-space-700 rounded-lg p-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-cyber-primary focus:border-transparent"
+          className="form-textarea w-full mb-2 bg-space-800 border border-space-700 rounded-lg p-2 text-space-50 placeholder-gray-400 focus:ring-2 focus:ring-cyber-primary focus:border-transparent"
           placeholder="Add a comment..."
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}

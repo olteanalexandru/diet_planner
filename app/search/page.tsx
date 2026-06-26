@@ -6,9 +6,11 @@ import Image from 'next/image';
 import { Loader2, Sparkles } from 'lucide-react';
 import { DIET_OPTIONS, TAG_OPTIONS } from '../constants';
 import { SearchProvider, useSearch } from '../context/SearchContext';
+import { useLanguage } from '../context/LanguageContext';
 
 function SearchContent() {
   const router = useRouter();
+  const { t } = useLanguage();
   const {
     filters,
     searchResults,
@@ -42,7 +44,7 @@ function SearchContent() {
         body: JSON.stringify({ query: aiQuery }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to parse search query');
+      if (!response.ok) throw new Error(data.error || t('search.errorParseQuery'));
 
       applyFilters({
         title: data.title || '',
@@ -51,7 +53,7 @@ function SearchContent() {
         ingredients: data.ingredients || [],
       });
     } catch (err) {
-      setAiError(err instanceof Error ? err.message : 'Failed to parse search query');
+      setAiError(err instanceof Error ? err.message : t('search.errorParseQuery'));
     } finally {
       setAiLoading(false);
     }
@@ -73,12 +75,12 @@ function SearchContent() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-8 text-[rgb(var(--foreground))]">Search Recipes</h1>
+      <h1 className="text-3xl font-bold mb-8 text-[rgb(var(--foreground))]">{t('nav.search')}</h1>
 
       <div className="card-cyber p-4 mb-6">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles size={18} className="text-cyber-primary" />
-          <h2 className="font-semibold text-[rgb(var(--foreground))]">Ask AI</h2>
+          <h2 className="font-semibold text-[rgb(var(--foreground))]">{t('search.askAi')}</h2>
         </div>
         <div className="flex gap-2">
           <input
@@ -86,7 +88,7 @@ function SearchContent() {
             value={aiQuery}
             onChange={(e) => setAiQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAskAi()}
-            placeholder="e.g. quick vegan dinners with chickpeas"
+            placeholder={t('search.askAiPlaceholder')}
             className="input-cyber w-full"
           />
           <button
@@ -96,7 +98,7 @@ function SearchContent() {
             className="btn-cyber flex items-center gap-2 whitespace-nowrap"
           >
             {aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            Ask AI
+            {t('search.askAi')}
           </button>
         </div>
         {aiError && <p className="text-red-400 text-sm mt-2">{aiError}</p>}
@@ -106,8 +108,8 @@ function SearchContent() {
         {/* Filters Sidebar */}
         <div className="lg:col-span-1 space-y-6">
           <div className="rounded-lg glass p-4">
-            <h2 className="font-semibold mb-4 text-[rgb(var(--foreground))]">Filters</h2>
-            
+            <h2 className="font-semibold mb-4 text-[rgb(var(--foreground))]">{t('search.filters')}</h2>
+
             {/* Search Input */}
             <div className="mb-4">
               <input
@@ -115,13 +117,13 @@ function SearchContent() {
                 className="input-cyber w-full"
                 value={filters.title}
                 onChange={(e) => updateFilters('title', e.target.value)}
-                placeholder="Search recipes..."
+                placeholder={t('search.searchPlaceholder')}
               />
             </div>
 
             {/* Diet Filters */}
             <div className="mb-4">
-              <h3 className="font-medium mb-2">Dietary Preferences</h3>
+              <h3 className="font-medium mb-2">{t('search.dietaryPreferences')}</h3>
               <div className="space-y-2">
                 {DIET_OPTIONS.map(diet => (
                   <label key={diet} className="flex items-center">
@@ -144,7 +146,7 @@ function SearchContent() {
 
             {/* Tags Filter */}
             <div className="mb-4">
-              <h3 className="font-medium mb-2">Tags</h3>
+              <h3 className="font-medium mb-2">{t('search.tags')}</h3>
               <div className="space-y-2">
                 {TAG_OPTIONS.map(tag => (
                   <label key={tag} className="flex items-center">
@@ -167,7 +169,7 @@ function SearchContent() {
 
             {/* Trending Tags */}
             <div className="mb-4">
-              <h3 className="font-medium mb-2">Trending Tags</h3>
+              <h3 className="font-medium mb-2">{t('recipeFeed.trendingTags')}</h3>
               <div className="flex flex-wrap gap-2">
                 {trendingTags.map(({ tag, count }) => (
                   <button
@@ -197,7 +199,7 @@ function SearchContent() {
                 value={customTag}
                 onChange={(e) => setCustomTag(e.target.value)}
                 onKeyDown={handleAddCustomTag}
-                placeholder="Add custom tag and press Enter"
+                placeholder={t('search.addCustomTagPlaceholder')}
                 className="w-full p-2 border rounded-md"
               />
             </div>
@@ -224,13 +226,13 @@ function SearchContent() {
 
             {/* Ingredients Filter */}
             <div className="mt-4">
-              <h3 className="font-medium mb-2">Ingredients</h3>
+              <h3 className="font-medium mb-2">{t('search.ingredients')}</h3>
               <input
                 type="text"
                 value={ingredient}
                 onChange={(e) => setIngredient(e.target.value)}
                 onKeyDown={handleAddIngredient}
-                placeholder="Add ingredient and press Enter"
+                placeholder={t('search.addIngredientPlaceholder')}
                 className="w-full p-2 border rounded-md"
               />
               <div className="flex flex-wrap gap-2 mt-2">
@@ -290,11 +292,11 @@ function SearchContent() {
                         {recipe.description}
                       </p>
                       <div className="text-[rgb(var(--muted))] text-sm mb-2">
-                        <strong className="text-[rgb(var(--foreground))]">Ingredients:</strong> 
+                        <strong className="text-[rgb(var(--foreground))]">{t('search.ingredientsColon')}</strong>
                         {recipe.ingredients.join(', ')}
                       </div>
                       <div className="flex justify-between items-center text-sm text-[rgb(var(--muted))]">
-                        <span>{recipe.cookingTime} mins</span>
+                        <span>{recipe.cookingTime} {t('search.mins')}</span>
                         <span className="capitalize">{recipe.difficulty}</span>
                       </div>
                     </div>

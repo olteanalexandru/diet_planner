@@ -4,14 +4,24 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useSearchParams } from 'next/navigation';
 import { Check } from 'lucide-react';
-import { PREMIUM_FEATURES } from '../utils/constants';
 import { useLanguage } from '../context/LanguageContext';
+import type { TranslationKey } from '../translations';
 
-const FREE_FEATURES = [
-  '5 AI recipe generations & nutrition estimates per month',
-  'Create and publish recipes',
-  'Follow other cooks and like/comment',
-  'Up to 3 recipe collections',
+const FREE_FEATURE_KEYS: TranslationKey[] = [
+  'pricing.free.feature.aiGenerations',
+  'pricing.free.feature.createPublish',
+  'pricing.free.feature.followLike',
+  'pricing.free.feature.collections',
+];
+
+const PREMIUM_FEATURE_KEYS: TranslationKey[] = [
+  'pricing.premium.feature.unlimitedAi',
+  'pricing.premium.feature.mealPlanGenerator',
+  'pricing.premium.feature.chefAssistant',
+  'pricing.premium.feature.exclusiveRecipes',
+  'pricing.premium.feature.unlimitedCollections',
+  'pricing.premium.feature.shoppingList',
+  'pricing.premium.feature.adFree',
 ];
 
 function CheckoutResultBanner() {
@@ -46,7 +56,7 @@ function PricingContent() {
     fetch(`/api/users/${user.sub}`)
       .then((res) => res.json())
       .then((data) => setSubscriptionStatus(data.user?.subscriptionStatus || 'free'))
-      .catch(() => setError('Failed to load subscription status'))
+      .catch(() => setError(t('pricing.error.loadStatus')))
       .finally(() => setLoadingStatus(false));
   }, [user]);
 
@@ -58,10 +68,10 @@ function PricingContent() {
     try {
       const response = await fetch('/api/premium', { method: 'POST' });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to start checkout');
+      if (!response.ok) throw new Error(data.error || t('pricing.error.startCheckout'));
       window.location.href = data.url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : t('pricing.error.generic'));
       setActionLoading(false);
     }
   };
@@ -72,10 +82,10 @@ function PricingContent() {
     try {
       const response = await fetch('/api/premium/portal', { method: 'POST' });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to open billing portal');
+      if (!response.ok) throw new Error(data.error || t('pricing.error.openPortal'));
       window.location.href = data.url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : t('pricing.error.generic'));
       setActionLoading(false);
     }
   };
@@ -83,7 +93,7 @@ function PricingContent() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold text-white mb-2">{t('pricing.title')}</h1>
+        <h1 className="text-3xl font-bold text-space-50 mb-2">{t('pricing.title')}</h1>
         <p className="text-space-400">{t('pricing.subtitle')}</p>
         <Suspense fallback={null}>
           <CheckoutResultBanner />
@@ -93,13 +103,13 @@ function PricingContent() {
 
       <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         <div className="bg-space-800 border border-space-700 rounded-xl p-8">
-          <h2 className="text-xl font-bold text-white mb-1">{t('pricing.free.title')}</h2>
-          <p className="text-3xl font-bold text-white mb-6">$0<span className="text-base text-space-400 font-normal">/month</span></p>
+          <h2 className="text-xl font-bold text-space-50 mb-1">{t('pricing.free.title')}</h2>
+          <p className="text-3xl font-bold text-space-50 mb-6">$0<span className="text-base text-space-400 font-normal">{t('pricing.perMonth')}</span></p>
           <ul className="space-y-3 mb-8">
-            {FREE_FEATURES.map((feature) => (
-              <li key={feature} className="flex items-start gap-2 text-space-300">
+            {FREE_FEATURE_KEYS.map((key) => (
+              <li key={key} className="flex items-start gap-2 text-space-300">
                 <Check size={18} className="text-space-400 mt-0.5 shrink-0" />
-                <span>{feature}</span>
+                <span>{t(key)}</span>
               </li>
             ))}
           </ul>
@@ -112,13 +122,13 @@ function PricingContent() {
           <span className="absolute -top-3 right-6 bg-cyber-primary text-space-900 text-xs font-bold px-3 py-1 rounded-full">
             {t('pricing.premium.badge')}
           </span>
-          <h2 className="text-xl font-bold text-white mb-1">{t('pricing.premium.title')}</h2>
-          <p className="text-3xl font-bold text-white mb-6">$9<span className="text-base text-space-400 font-normal">/month</span></p>
+          <h2 className="text-xl font-bold text-space-50 mb-1">{t('pricing.premium.title')}</h2>
+          <p className="text-3xl font-bold text-space-50 mb-6">$9<span className="text-base text-space-400 font-normal">{t('pricing.perMonth')}</span></p>
           <ul className="space-y-3 mb-8">
-            {PREMIUM_FEATURES.map((feature) => (
-              <li key={feature} className="flex items-start gap-2 text-space-300">
+            {PREMIUM_FEATURE_KEYS.map((key) => (
+              <li key={key} className="flex items-start gap-2 text-space-300">
                 <Check size={18} className="text-cyber-primary mt-0.5 shrink-0" />
-                <span>{feature}</span>
+                <span>{t(key)}</span>
               </li>
             ))}
           </ul>
@@ -136,7 +146,7 @@ function PricingContent() {
             <button
               onClick={handleManageSubscription}
               disabled={actionLoading}
-              className="w-full bg-space-700 hover:bg-space-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+              className="w-full bg-space-700 hover:bg-space-600 text-space-50 font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
             >
               {actionLoading ? t('pricing.opening') : t('pricing.manageSubscription')}
             </button>

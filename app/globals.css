@@ -56,9 +56,9 @@
 
 /* Glowing text effect */
 .glow-text {
-  text-shadow: 0 0 10px theme('colors.cyber.primary'),
-               0 0 20px theme('colors.cyber.primary'),
-               0 0 30px theme('colors.cyber.primary');
+  text-shadow: 0 0 10px rgb(var(--cyber-primary)),
+               0 0 20px rgb(var(--cyber-primary)),
+               0 0 30px rgb(var(--cyber-primary));
 }
 
 /* Grid background pattern */
@@ -184,11 +184,11 @@
 @keyframes glow {
   0%, 100% {
     opacity: 1;
-    text-shadow: 0 0 10px theme('colors.cyber.primary');
+    text-shadow: 0 0 10px rgb(var(--cyber-primary));
   }
   50% {
     opacity: 0.5;
-    text-shadow: 0 0 20px theme('colors.cyber.primary');
+    text-shadow: 0 0 20px rgb(var(--cyber-primary));
   }
 }
 
@@ -206,25 +206,96 @@
   @apply transition-transform duration-300 hover:scale-105;
 }
 @layer base {
+  /* Cyber Dark (default) - the original cyberpunk palette, now expressed as
+     CSS variables so every space, cyber and gray utility class used across
+     the app reacts to the active theme instead of only the body tag. */
   :root[class~="theme-dark"] {
     --background: 15 23 42;
     --foreground: 241 245 249;
     --muted: 51 65 85;
     --accent: 99 102 241;
+
+    --cyber-primary: 15 244 198;
+    --cyber-secondary: 123 44 191;
+    --cyber-accent: 255 18 79;
+    --cyber-glow: 0 245 212;
+
+    --space-50: 234 234 234;
+    --space-100: 190 190 191;
+    --space-200: 146 146 147;
+    --space-300: 102 102 103;
+    --space-400: 61 61 62;
+    --space-500: 36 36 37;
+    --space-600: 26 26 27;
+    --space-700: 19 19 20;
+    --space-800: 13 13 14;
+    --space-900: 6 6 7;
+
+    --gray-100: 243 244 246;
+    --gray-300: 209 213 219;
+    --gray-400: 156 163 175;
+    --gray-500: 107 114 128;
   }
 
+  /* Light - the space/gray scale is mirrored (light backgrounds, dark text)
+     and the cyber accent colors are darkened so they keep enough contrast
+     against white instead of disappearing like the original neon hues did. */
   :root[class~="theme-light"] {
     --background: 255 255 255;
     --foreground: 15 23 42;
     --muted: 100 116 139;
     --accent: 59 130 246;
+
+    --cyber-primary: 15 118 110;
+    --cyber-secondary: 109 40 217;
+    --cyber-accent: 225 29 72;
+    --cyber-glow: 13 148 136;
+
+    --space-50: 6 6 7;
+    --space-100: 13 13 14;
+    --space-200: 19 19 20;
+    --space-300: 26 26 27;
+    --space-400: 36 36 37;
+    --space-500: 61 61 62;
+    --space-600: 102 102 103;
+    --space-700: 146 146 147;
+    --space-800: 190 190 191;
+    --space-900: 234 234 234;
+
+    --gray-100: 17 24 39;
+    --gray-300: 55 65 81;
+    --gray-400: 75 85 99;
+    --gray-500: 107 114 128;
   }
 
+  /* Foodie - warm cream backgrounds with deep brown/orange text and accents,
+     same mirrored-scale approach as Light so contrast stays solid. */
   :root[class~="theme-foodie"] {
     --background: 255 247 237;
     --foreground: 124 45 18;
     --muted: 234 88 12;
     --accent: 249 115 22;
+
+    --cyber-primary: 234 88 12;
+    --cyber-secondary: 154 52 18;
+    --cyber-accent: 185 28 28;
+    --cyber-glow: 249 115 22;
+
+    --space-50: 67 20 7;
+    --space-100: 124 45 18;
+    --space-200: 154 52 18;
+    --space-300: 194 65 12;
+    --space-400: 234 88 12;
+    --space-500: 251 146 60;
+    --space-600: 253 186 116;
+    --space-700: 254 215 170;
+    --space-800: 255 237 213;
+    --space-900: 255 247 237;
+
+    --gray-100: 67 20 7;
+    --gray-300: 124 45 18;
+    --gray-400: 154 52 18;
+    --gray-500: 194 65 12;
   }
 
   body {

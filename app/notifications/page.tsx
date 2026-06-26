@@ -83,7 +83,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-2xl font-bold text-white mb-6">{t('notifications.title')}</h1>
+      <h1 className="text-2xl font-bold text-space-50 mb-6">{t('notifications.title')}</h1>
 
       {loading && <p className="text-space-400">{t('notifications.loading')}</p>}
       {error && <p className="text-red-400">{error}</p>}
