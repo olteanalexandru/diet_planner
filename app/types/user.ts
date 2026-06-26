@@ -19,4 +19,5 @@ export interface User {
   };
   isFollowing?: boolean;
   createdAt: string;
+  subscriptionStatus?: string;
 }

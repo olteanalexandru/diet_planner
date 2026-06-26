@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 import { formatRelative } from 'date-fns';
-import { 
-  ActivityGroup, 
-  SocialActivity, 
+import prisma from '../../lib/db';
+import {
+  ActivityGroup,
+  SocialActivity,
   ActivityType,
   Achievement
 } from '../../types/social';
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-const prisma = globalForPrisma.prisma ?? new PrismaClient()
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 const ITEMS_PER_PAGE = 10;
 
@@ -164,7 +157,7 @@ export async function GET(req: NextRequest) {
             likes: activity.likes.length,
             comments: activity.comments.length,
             hasLiked: activity.likes.some(like => like.userId === session.user.sub),
-            hasCommented: activity.comments.some(comment => comment.user?.name === session.user.name)
+            hasCommented: activity.comments.some(comment => comment.userId === session.user.sub)
           }
         };
       })

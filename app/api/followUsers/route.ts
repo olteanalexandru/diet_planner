@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
-
-const prisma = new PrismaClient();
+import prisma from '../../lib/db';
+import { checkSocialButterflyAchievement } from '../../lib/achievements';
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,26 +23,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Create follow relationship and activity
-    const [follow, activity] = await prisma.$transaction([
-      // Create follow
-      prisma.follow.create({
-        data: {
-          followerId: session.user.sub,
-          followingId: followingId,
-        },
-      }),
-      // Create activity with appropriate type
-      prisma.activity.create({
-        data: {
-          type: 'started_following',
-          userId: session.user.sub,
-          targetUserId: followingId,
-        },
-      }),
-    ]);
+    try {
+      // Create follow relationship and activity
+      const [follow, activity] = await prisma.$transaction([
+        // Create follow
+        prisma.follow.create({
+          data: {
+            followerId: session.user.sub,
+            followingId: followingId,
+          },
+        }),
+        // Create activity with appropriate type
+        prisma.activity.create({
+          data: {
+            type: 'started_following',
+            userId: session.user.sub,
+            targetUserId: followingId,
+          },
+        }),
+      ]);
 
-    return NextResponse.json({ follow, activity }, { status: 201 });
+      await checkSocialButterflyAchievement(followingId);
+
+      return NextResponse.json({ follow, activity }, { status: 201 });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return NextResponse.json({ error: 'Already following' }, { status: 400 });
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error following user:', error);
     return NextResponse.json({ error: 'Error following user' }, { status: 500 });
@@ -58,30 +67,37 @@ export async function DELETE(req: NextRequest) {
 
     const { followingId } = await req.json();
 
-    const [ activity] = await prisma.$transaction([
-      // Delete follow
-      prisma.follow.delete({
-        where: {
-          followerId_followingId: {
-            followerId: session.user.sub,
-            followingId: followingId,
+    try {
+      const [activity] = await prisma.$transaction([
+        // Delete follow
+        prisma.follow.delete({
+          where: {
+            followerId_followingId: {
+              followerId: session.user.sub,
+              followingId: followingId,
+            },
           },
-        },
-      }),
-      // Create unfollow activity
-      prisma.activity.create({
-        data: {
-          type: 'unfollowed',
-          userId: session.user.sub,
-          targetUserId: followingId,
-        },
-      }),
-    ]);
+        }),
+        // Create unfollow activity
+        prisma.activity.create({
+          data: {
+            type: 'unfollowed',
+            userId: session.user.sub,
+            targetUserId: followingId,
+          },
+        }),
+      ]);
 
-    return NextResponse.json({ 
-      message: 'Unfollowed successfully',
-      activity 
-    });
+      return NextResponse.json({
+        message: 'Unfollowed successfully',
+        activity
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return NextResponse.json({ error: 'Not following this user' }, { status: 404 });
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error unfollowing user:', error);
     return NextResponse.json({ error: 'Error unfollowing user' }, { status: 500 });

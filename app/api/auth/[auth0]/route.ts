@@ -3,9 +3,7 @@
 import { handleAuth, handleCallback, getSession } from "@auth0/nextjs-auth0";
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from '../../../lib/db';
 
 export const GET = handleAuth({
   callback: async (req: NextApiRequest, res: NextApiResponse) => {
@@ -21,12 +19,12 @@ export const GET = handleAuth({
           where: { id: session.user.sub },
           update: {
             name: session.user.name || '',
-            email: session.user.email || '',
+            email: session.user.email || null,
           },
           create: {
             id: session.user.sub,
             name: session.user.name || '',
-            email: session.user.email || '',
+            email: session.user.email || null,
           },
         });
 

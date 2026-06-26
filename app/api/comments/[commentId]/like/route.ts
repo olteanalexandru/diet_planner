@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
-
-const prisma = new PrismaClient();
+import prisma from '../../../../lib/db';
 
 export async function POST(
   req: NextRequest,
@@ -67,14 +66,21 @@ export async function DELETE(
   try {
     const { commentId } = params;
 
-    await prisma.commentLike.delete({
-      where: {
-        userId_commentId: {
-          userId: session.user.sub,
-          commentId,
+    try {
+      await prisma.commentLike.delete({
+        where: {
+          userId_commentId: {
+            userId: session.user.sub,
+            commentId,
+          },
         },
-      },
-    });
+      });
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025')) {
+        throw error;
+      }
+      // Already unliked (race with another request) - fall through to return current count
+    }
 
     const likes = await prisma.commentLike.count({
       where: { commentId },

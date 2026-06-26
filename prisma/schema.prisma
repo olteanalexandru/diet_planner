@@ -18,7 +18,12 @@ model User {
   website              String?
   specialties          String[]
   dietaryPreferences   String[]
-  subscriptionStatus   String                @default("free")
+  subscriptionStatus   String                @default("free") // Values: "free", "premium"
+  stripeCustomerId     String?               @unique
+  stripeSubscriptionId String?               @unique
+  subscriptionPeriodEnd DateTime?
+  monthlyGenerations   Int                   @default(0) // AI recipe generations used in the current period (free tier limit)
+  generationsResetAt   DateTime              @default(now())
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   avatar               String?
@@ -36,6 +41,7 @@ model User {
   mealPlans            MealPlan[]
   recipes              Recipe[]
   RecipeLike           RecipeLike[]
+  recipeRatings        RecipeRating[]
   collections          Collection[]          // Added collections relation
 }
 
@@ -95,6 +101,7 @@ model Recipe {
   imageUrlLarge String?
   viewCount     Int               @default(0)
   isPublished   Boolean           @default(true)
+  isPremium     Boolean           @default(false) // Premium-exclusive recipe; full content gated behind subscription
   authorId      String
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
@@ -105,6 +112,7 @@ model Recipe {
   mealPlans     MealPlan[]
   author        User              @relation(fields: [authorId], references: [id])
   likes         RecipeLike[]
+  ratings       RecipeRating[]
   collections   CollectionRecipe[] // Added collections relation
 
   @@index([authorId])
@@ -114,6 +122,7 @@ model Recipe {
   @@index([viewCount])
   @@index([rating])
   @@index([status])
+  @@index([isPremium])
 }
 
 model Activity {
@@ -125,6 +134,7 @@ model Activity {
   milestone     Int?
   achievementId String?
   createdAt     DateTime          @default(now())
+  readAt        DateTime?         // Null until the target user has seen this as a notification
   recipe        Recipe?           @relation(fields: [recipeId], references: [id])
   targetUser    User?             @relation("TargetUser", fields: [targetUserId], references: [id])
   user          User              @relation("ActivityUser", fields: [userId], references: [id])
@@ -261,6 +271,21 @@ model RecipeLike {
   userId    String
   recipeId  String
   createdAt DateTime @default(now())
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, recipeId])
+  @@index([userId])
+  @@index([recipeId])
+}
+
+model RecipeRating {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  value     Int // 1-5 stars
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   recipe    Recipe   @relation(fields: [recipeId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
 

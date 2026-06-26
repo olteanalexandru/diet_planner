@@ -6,9 +6,11 @@ import { ActivityCard } from '../Components/social/ActivityCard';
 import { SuggestedUsers } from '../Components/social/SuggestedUsers';
 import { TrendingTopics } from '../Components/social/TrendingTopics';
 import { useSocialFeed } from '../context/SocialFeedContext';
+import { useLanguage } from '../context/LanguageContext';
 
 
 const SocialFeed = () => {
+  const { t } = useLanguage();
   // Add loading ref to prevent multiple calls
   const loadingRef = useRef(false);
   const { ref, inView } = useInView({
@@ -29,11 +31,11 @@ const SocialFeed = () => {
 
   // Activity type options with icons and labels
   const activityTypes: Array<{ value: string; label: string; icon: React.ReactNode }> = [
-    { value: 'all', label: 'All Activities', icon: <Filter size={16} /> },
-    { value: 'recipe_created', label: 'Recipes', icon: <ChefHat size={16} /> },
-    { value: 'recipe_liked', label: 'Likes', icon: <Flame size={16} /> },
-    { value: 'started_following', label: 'Following', icon: <Users size={16} /> },
-    { value: 'achievement_earned', label: 'Achievements', icon: <TrendingUp size={16} /> }
+    { value: 'all', label: t('socialFeed.filterAll'), icon: <Filter size={16} /> },
+    { value: 'recipe_created', label: t('socialFeed.filterRecipes'), icon: <ChefHat size={16} /> },
+    { value: 'recipe_liked', label: t('socialFeed.filterLikes'), icon: <Flame size={16} /> },
+    { value: 'started_following', label: t('socialFeed.filterFollowing'), icon: <Users size={16} /> },
+    { value: 'achievement_earned', label: t('socialFeed.filterAchievements'), icon: <TrendingUp size={16} /> }
   ];
 
   // Handle infinite scroll
@@ -67,7 +69,7 @@ const SocialFeed = () => {
         {/* Filters Sidebar */}
         <aside className="lg:w-64 space-y-6">
           <div className="card-cyber p-4">
-            <h2 className="text-lg font-semibold mb-4">Categories</h2>
+            <h2 className="text-lg font-semibold mb-4">{t('feed.categories')}</h2>
             <div className="space-y-1">
               {activityTypes.map(type => (
                 <button
@@ -87,29 +89,29 @@ const SocialFeed = () => {
           </div>
 
           <div className="card-cyber p-4">
-            <h2 className="text-lg font-semibold mb-4">Sort By</h2>
+            <h2 className="text-lg font-semibold mb-4">{t('socialFeed.sortBy')}</h2>
             <div className="space-y-1">
               <button
                 onClick={() => handleSortChange('trending')}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  filters.sortBy === 'trending' 
-                    ? 'bg-cyber-primary text-space-900' 
+                  filters.sortBy === 'trending'
+                    ? 'bg-cyber-primary text-space-900'
                     : 'hover:bg-space-700'
                 }`}
               >
                 <TrendingUp size={16} />
-                Trending
+                {t('feed.sortTrending')}
               </button>
               <button
                 onClick={() => handleSortChange('latest')}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                  filters.sortBy === 'latest' 
-                    ? 'bg-cyber-primary text-space-900' 
+                  filters.sortBy === 'latest'
+                    ? 'bg-cyber-primary text-space-900'
                     : 'hover:bg-space-700'
                 }`}
               >
                 <Clock size={16} />
-                Latest
+                {t('feed.sortLatest')}
               </button>
             </div>
           </div>
@@ -129,9 +131,9 @@ const SocialFeed = () => {
         <main className="flex-grow space-y-6">
           {activities.length === 0 && !isLoading ? (
             <div className="card-cyber p-6 text-center">
-              <p className="text-gray-400 mb-4">No activities to show</p>
+              <p className="text-gray-400 mb-4">{t('socialFeed.emptyTitle')}</p>
               <p className="text-sm text-gray-500">
-                Try adjusting your filters or follow more users to see their activities
+                {t('socialFeed.emptyHint')}
               </p>
             </div>
           ) : (
@@ -162,11 +164,11 @@ const SocialFeed = () => {
                 {isLoading && (
                   <div className="flex items-center justify-center gap-2 text-gray-400">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Loading more activities...</span>
+                    <span>{t('socialFeed.loadingMore')}</span>
                   </div>
                 )}
                 {!hasMore && activities.length > 0 && (
-                  <p className="text-gray-400">No more activities to load</p>
+                  <p className="text-gray-400">{t('socialFeed.noMore')}</p>
                 )}
               </div>
             </>

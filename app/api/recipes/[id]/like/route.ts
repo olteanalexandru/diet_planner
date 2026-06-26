@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
-
-const prisma = new PrismaClient();
+import prisma from '../../../../lib/db';
+import { checkPopularRecipeAchievement } from '../../../../lib/achievements';
 
 export async function POST(
   req: NextRequest,
@@ -17,13 +17,6 @@ export async function POST(
     // Check if recipe exists
     const recipe = await prisma.recipe.findUnique({
       where: { id: params.id },
-      include: {
-        _count: {
-          select: {
-            likes: true
-          }
-        }
-      }
     });
 
     if (!recipe) {
@@ -41,31 +34,43 @@ export async function POST(
     });
 
     if (existingLike) {
-      return NextResponse.json({ 
+      const likes = await prisma.recipeLike.count({ where: { recipeId: params.id } });
+      return NextResponse.json({
         error: 'Already liked',
-        likes: recipe._count.likes 
+        likes
       }, { status: 400 });
     }
 
-    // Create like and activity in transaction
-    const [newLike] = await prisma.$transaction([
-      prisma.recipeLike.create({
-        data: {
-          userId: session.user.sub,
-          recipeId: params.id,
-        },
-      }),
-      prisma.activity.create({
-        data: {
-          type: 'recipe_liked',
-          userId: session.user.sub,
-          recipeId: params.id,
-        },
-      }),
-    ]);
+    try {
+      // Create like and activity in transaction
+      await prisma.$transaction([
+        prisma.recipeLike.create({
+          data: {
+            userId: session.user.sub,
+            recipeId: params.id,
+          },
+        }),
+        prisma.activity.create({
+          data: {
+            type: 'recipe_liked',
+            userId: session.user.sub,
+            recipeId: params.id,
+            targetUserId: recipe.authorId !== session.user.sub ? recipe.authorId : null,
+          },
+        }),
+      ]);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const likes = await prisma.recipeLike.count({ where: { recipeId: params.id } });
+        return NextResponse.json({ error: 'Already liked', likes }, { status: 400 });
+      }
+      throw error;
+    }
 
-    // Return the updated count (current count + 1)
-    return NextResponse.json({ likes: recipe._count.likes + 1 });
+    // Return the up-to-date count
+    const likes = await prisma.recipeLike.count({ where: { recipeId: params.id } });
+    await checkPopularRecipeAchievement(params.id);
+    return NextResponse.json({ likes });
   } catch (error) {
     console.error('Error liking recipe:', error);
     return NextResponse.json(
@@ -85,51 +90,26 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get current recipe with count
-    const recipe = await prisma.recipe.findUnique({
-      where: { id: params.id },
-      include: {
-        _count: {
-          select: {
-            likes: true
-          }
-        }
+    try {
+      await prisma.recipeLike.delete({
+        where: {
+          userId_recipeId: {
+            userId: session.user.sub,
+            recipeId: params.id,
+          },
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        const likes = await prisma.recipeLike.count({ where: { recipeId: params.id } });
+        return NextResponse.json({ error: 'Like not found', likes }, { status: 404 });
       }
-    });
-
-    if (!recipe) {
-      return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
+      throw error;
     }
 
-    // Check if like exists
-    const existingLike = await prisma.recipeLike.findUnique({
-      where: {
-        userId_recipeId: {
-          userId: session.user.sub,
-          recipeId: params.id,
-        },
-      },
-    });
-
-    if (!existingLike) {
-      return NextResponse.json({ 
-        error: 'Like not found',
-        likes: recipe._count.likes 
-      }, { status: 404 });
-    }
-
-    // Delete like
-    await prisma.recipeLike.delete({
-      where: {
-        userId_recipeId: {
-          userId: session.user.sub,
-          recipeId: params.id,
-        },
-      },
-    });
-
-    // Return the updated count (current count - 1)
-    return NextResponse.json({ likes: recipe._count.likes - 1 });
+    // Return the up-to-date count
+    const likes = await prisma.recipeLike.count({ where: { recipeId: params.id } });
+    return NextResponse.json({ likes });
   } catch (error) {
     console.error('Error unliking recipe:', error);
     return NextResponse.json(

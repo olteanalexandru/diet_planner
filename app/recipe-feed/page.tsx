@@ -7,11 +7,13 @@ import { RecipeGridSkeleton } from '../Components/recipes/RecipeSkeleton';
 import { FeedRecipeCard } from '../Components/recipes/FeedRecipeCard';
 import { useRecipeFeed, RecipeFeedProvider } from '../context/RecipeFeedContext';
 import { CATEGORIES } from '@/app/utils/constants';
+import { useLanguage } from '../context/LanguageContext';
 
 
 function RecipeFeedContent() {
-  const { 
-    recipes, 
+  const { t } = useLanguage();
+  const {
+    recipes,
     loading, 
     error, 
     category, 
@@ -70,7 +72,7 @@ function RecipeFeedContent() {
                 }`}
               >
                 <TrendingUp size={16} />
-                Trending
+                {t('feed.sortTrending')}
               </button>
               <button
                 onClick={() => setSort('latest')}
@@ -79,7 +81,7 @@ function RecipeFeedContent() {
                 }`}
               >
                 <Clock size={16} />
-                Latest
+                {t('feed.sortLatest')}
               </button>
             </div>
 
@@ -107,7 +109,7 @@ function RecipeFeedContent() {
           <aside className="hidden md:block w-64 space-y-6">
             {/* Categories */}
             <div className="card-cyber p-4">
-              <h2 className="text-lg font-semibold mb-4">Categories</h2>
+              <h2 className="text-lg font-semibold mb-4">{t('feed.categories')}</h2>
               <div className="space-y-1">
                 {CATEGORIES.map(cat => (
                   <button
@@ -128,7 +130,7 @@ function RecipeFeedContent() {
 
             {/* Trending Tags */}
             <div className="card-cyber p-4">
-              <h2 className="text-lg font-semibold mb-4">Trending Tags</h2>
+              <h2 className="text-lg font-semibold mb-4">{t('recipeFeed.trendingTags')}</h2>
               <div className="flex flex-wrap gap-2">
                 {trendingTags.map(({ tag, count }) => (
                   <button
@@ -159,7 +161,7 @@ function RecipeFeedContent() {
                   onClick={refreshRecipes}
                   className="btn-cyber mt-4"
                 >
-                  Try Again
+                  {t('recipeFeed.tryAgain')}
                 </button>
               </div>
             ) : (
@@ -182,7 +184,7 @@ function RecipeFeedContent() {
                 {/* No More Content */}
                 {!hasMore && recipes.length > 0 && (
                   <div className="text-center py-8 text-gray-400">
-                    You've reached the end!
+                    {t('recipeFeed.endOfFeed')}
                   </div>
                 )}
               </div>
@@ -196,7 +198,7 @@ function RecipeFeedContent() {
         <button
           onClick={scrollToTop}
           className="fixed bottom-6 right-6 p-4 rounded-full bg-cyber-primary text-space-900 shadow-lg hover:bg-cyber-accent transition-colors z-50"
-          aria-label="Scroll to top"
+          aria-label={t('recipeFeed.scrollToTop')}
         >
           <ArrowUp size={24} />
         </button>

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
-
-const prisma = new PrismaClient();
+import prisma from '../../lib/db';
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -28,12 +26,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const recipe = await prisma.recipe.findUnique({
+      where: { id: recipeId },
+      select: { authorId: true },
+    });
+
     // Then create the activity with the correct 'type' field
     await prisma.activity.create({
       data: {
         type: 'commented', // Changed from 'action' to 'type'
         userId: session.user.sub,
         recipeId,
+        targetUserId: recipe && recipe.authorId !== session.user.sub ? recipe.authorId : null,
       },
     });
 

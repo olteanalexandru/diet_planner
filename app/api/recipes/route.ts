@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
 import axios from 'axios';
+import prisma from '../../lib/db';
+import { checkRecipeAchievements } from '../../lib/achievements';
 
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
-const prisma = new PrismaClient();
 
 export async function GET(req: NextRequest) {
   try {
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       user = await prisma.user.create({
         data: {
           id: session.user.sub,
-          email: session.user.email || '',
+          email: session.user.email || null,
           name: session.user.name || '',
         }
       });
@@ -151,6 +151,10 @@ export async function POST(req: NextRequest) {
         recipeId: recipe.id,
       }
     });
+
+    if (status === 'published') {
+      await checkRecipeAchievements(user.id);
+    }
 
     return NextResponse.json({ recipe }, { status: 201 });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/app/lib/db';
 import { getSession } from '@auth0/nextjs-auth0';
+import { Prisma } from '@prisma/client';
 
 // Add a recipe to a collection
 export async function POST(
@@ -35,17 +36,27 @@ export async function POST(
       return NextResponse.json({ error: 'Recipe not found' }, { status: 404 });
     }
 
-    const collectionRecipe = await prisma.collectionRecipe.create({
-      data: {
-        collectionId: params.collectionId,
-        recipeId,
-      },
-      include: {
-        recipe: true,
-      },
-    });
+    try {
+      const collectionRecipe = await prisma.collectionRecipe.create({
+        data: {
+          collectionId: params.collectionId,
+          recipeId,
+        },
+        include: {
+          recipe: true,
+        },
+      });
 
-    return NextResponse.json(collectionRecipe);
+      return NextResponse.json(collectionRecipe);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return NextResponse.json(
+          { error: 'Recipe is already in this collection' },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error adding recipe to collection:', error);
     return NextResponse.json(

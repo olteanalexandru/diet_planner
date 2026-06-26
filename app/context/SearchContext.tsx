@@ -14,6 +14,7 @@ interface SearchContextType {
   totalResults: number;
   trendingTags: { tag: string; count: number }[];
   updateFilters: (key: keyof SearchFilters, value: any) => void;
+  applyFilters: (partial: Partial<SearchFilters>) => void;
   addCustomTag: (tag: string) => void;
   removeTag: (tag: string) => void;
   addIngredient: (ingredient: string) => void;
@@ -82,6 +83,10 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  const applyFilters = (partial: Partial<SearchFilters>) => {
+    setFilters(prev => ({ ...prev, ...partial, page: 1 }));
+  };
+
   const addCustomTag = (tag: string) => {
     const trimmedTag = tag.trim();
     if (trimmedTag && !filters.tags.includes(trimmedTag)) {
@@ -112,6 +117,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     totalResults,
     trendingTags,
     updateFilters,
+    applyFilters,
     addCustomTag,
     removeTag,
     addIngredient,

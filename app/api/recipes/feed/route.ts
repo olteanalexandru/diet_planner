@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { getSession } from '@auth0/nextjs-auth0';
+import prisma from '../../../lib/db';
 
-const prisma = new PrismaClient();
 const ITEMS_PER_PAGE = 10;
 
 export async function POST(req: NextRequest) {

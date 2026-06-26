@@ -1,7 +1,7 @@
-import React, { useState, Dispatch, SetStateAction } from 'react';
+import React, { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { Heart, Clock, Share2, ChefHat, Edit2, Save, Loader2, MessageCircle, PenTool, Bookmark } from 'lucide-react';
+import { Heart, Clock, Share2, ChefHat, Edit2, Save, Loader2, MessageCircle, PenTool, Bookmark, Star, Sparkles } from 'lucide-react';
 import { Recipe } from '../../types';
 import Link from 'next/link';
 import { Comment } from '../Comment';
@@ -11,6 +11,53 @@ import { FollowButton } from '../FollowButton';
 import { RecipeEditModal } from './RecipeEditModal';
 import { RecipeManagement } from './RecipeManagement';
 import AddToCollectionButton from './AddToCollectionButton';
+import { PremiumUpsell } from '../PremiumUpsell';
+
+interface StarRatingProps {
+  rating: number | null;
+  ratingCount: number;
+  userRating: number | null;
+  onRate: (value: number) => void;
+  disabled?: boolean;
+}
+
+const StarRating: React.FC<StarRatingProps> = ({ rating, ratingCount, userRating, onRate, disabled }) => {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const displayValue = hovered ?? userRating ?? 0;
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            type="button"
+            disabled={disabled}
+            onClick={() => onRate(value)}
+            onMouseEnter={() => setHovered(value)}
+            onMouseLeave={() => setHovered(null)}
+            className="disabled:cursor-not-allowed"
+            title={`Rate ${value} star${value > 1 ? 's' : ''}`}
+          >
+            <Star
+              size={18}
+              className={value <= displayValue ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}
+            />
+          </button>
+        ))}
+      </div>
+      <span className="text-sm text-gray-400">
+        {rating ? rating.toFixed(1) : 'No ratings'} {ratingCount > 0 && `(${ratingCount})`}
+      </span>
+    </div>
+  );
+};
+
+const AI_ASSIST_ACTIONS: { id: 'substitutions' | 'tips' | 'pairing'; label: string }[] = [
+  { id: 'substitutions', label: 'Substitutions' },
+  { id: 'tips', label: 'Chef Tips' },
+  { id: 'pairing', label: 'Pairings' },
+];
 
 interface RecipeDetailProps {
   recipe: Recipe;
@@ -44,6 +91,90 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
+
+  const [ratingInfo, setRatingInfo] = useState<{ rating: number | null; ratingCount: number; userRating: number | null }>({
+    rating: initialRecipe.rating ?? null,
+    ratingCount: initialRecipe.ratingCount ?? 0,
+    userRating: null,
+  });
+  const [isRating, setIsRating] = useState(false);
+
+  const [aiAssist, setAiAssist] = useState<{
+    loadingAction: string | null;
+    results: Record<string, string[]>;
+    locked: boolean;
+    error: string | null;
+  }>({ loadingAction: null, results: {}, locked: false, error: null });
+
+  useEffect(() => {
+    if (!recipe.id || recipe.id.startsWith('temp-')) return;
+    fetch(`/api/recipes/${recipe.id}/rate`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setRatingInfo(data);
+      })
+      .catch(() => {});
+  }, [recipe.id]);
+
+  const handleRate = async (value: number) => {
+    if (!user) {
+      router.push('/api/auth/login');
+      return;
+    }
+    if (!recipe.id || recipe.id.startsWith('temp-')) return;
+
+    setIsRating(true);
+    try {
+      const response = await fetch(`/api/recipes/${recipe.id}/rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+      if (!response.ok) throw new Error('Failed to submit rating');
+      const data = await response.json();
+      setRatingInfo(data);
+    } catch (error) {
+      setError('Failed to submit rating');
+    } finally {
+      setIsRating(false);
+    }
+  };
+
+  const handleAiAssist = async (action: 'substitutions' | 'tips' | 'pairing') => {
+    if (!user) {
+      router.push('/api/auth/login');
+      return;
+    }
+    if (!recipe.id || recipe.id.startsWith('temp-')) return;
+
+    setAiAssist(prev => ({ ...prev, loadingAction: action, error: null }));
+    try {
+      const response = await fetch(`/api/recipes/${recipe.id}/ai-assist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = await response.json();
+
+      if (response.status === 403) {
+        setAiAssist(prev => ({ ...prev, loadingAction: null, locked: true }));
+        return;
+      }
+      if (!response.ok) throw new Error(data.error || 'Failed to generate suggestions');
+
+      setAiAssist(prev => ({
+        ...prev,
+        loadingAction: null,
+        results: { ...prev.results, [action]: data.items || [] },
+      }));
+    } catch (err) {
+      setAiAssist(prev => ({
+        ...prev,
+        loadingAction: null,
+        error: err instanceof Error ? err.message : 'Failed to generate suggestions',
+      }));
+    }
+  };
 
   const handleSaveRecipe = async (saveDraftOnly: boolean) => {
     if (!user) {
@@ -301,6 +432,15 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                       <Clock size={16} />
                       <span>{recipe.cookingTime} minutes</span>
                     </div>
+                    <div className="mt-2">
+                      <StarRating
+                        rating={ratingInfo.rating}
+                        ratingCount={ratingInfo.ratingCount}
+                        userRating={ratingInfo.userRating}
+                        onRate={handleRate}
+                        disabled={isRating}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex gap-2">
@@ -400,31 +540,97 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
             </div>
           </div>
 
-          <div className="card-cyber p-6">
-            <h2 className="text-xl font-semibold mb-4">Ingredients</h2>
-            <ul className="space-y-2">
-              {recipe.ingredients.map((ingredient: string, index: number) => (
-                <li key={index} className="flex items-center gap-2 text-gray-300">
-                  <span className="w-2 h-2 rounded-full bg-cyber-primary/50" />
-                  {ingredient}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {recipe.locked ? (
+            <PremiumUpsell
+              title="Premium recipe"
+              message="This recipe's ingredients and instructions are exclusive to Premium members."
+            />
+          ) : (
+            <>
+              <div className="card-cyber p-6">
+                <h2 className="text-xl font-semibold mb-4">Ingredients</h2>
+                <ul className="space-y-2">
+                  {recipe.ingredients.map((ingredient: string, index: number) => (
+                    <li key={index} className="flex items-center gap-2 text-gray-300">
+                      <span className="w-2 h-2 rounded-full bg-cyber-primary/50" />
+                      {ingredient}
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-          <div className="card-cyber p-6">
-            <h2 className="text-xl font-semibold mb-4">Instructions</h2>
-            <ol className="space-y-4">
-              {recipe.instructions.map((instruction: string, index: number) => (
-                <li key={index} className="flex gap-4 text-gray-300">
-                  <span className="flex-shrink-0 w-8 h-8 rounded-full bg-cyber-primary/10 flex items-center justify-center text-cyber-primary font-medium">
-                    {index + 1}
-                  </span>
-                  <p>{instruction}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
+              <div className="card-cyber p-6">
+                <h2 className="text-xl font-semibold mb-4">Instructions</h2>
+                <ol className="space-y-4">
+                  {recipe.instructions.map((instruction: string, index: number) => (
+                    <li key={index} className="flex gap-4 text-gray-300">
+                      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-cyber-primary/10 flex items-center justify-center text-cyber-primary font-medium">
+                        {index + 1}
+                      </span>
+                      <p>{instruction}</p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </>
+          )}
+
+          {recipe.id && !recipe.id.startsWith('temp-') && (
+            <div className="card-cyber p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles size={20} className="text-cyber-primary" />
+                <h2 className="text-xl font-semibold">AI Chef Assistant</h2>
+              </div>
+
+              {aiAssist.locked ? (
+                <PremiumUpsell
+                  title="AI Chef Assistant"
+                  message="Upgrade to Premium to get AI-powered substitutions, chef tips, and pairing suggestions for any recipe."
+                />
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {AI_ASSIST_ACTIONS.map(({ id, label }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => handleAiAssist(id)}
+                        disabled={aiAssist.loadingAction === id}
+                        className="btn-cyber-outline flex items-center gap-2 text-sm"
+                      >
+                        {aiAssist.loadingAction === id ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Sparkles size={16} />
+                        )}
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {aiAssist.error && (
+                    <p className="text-red-400 text-sm mb-4">{aiAssist.error}</p>
+                  )}
+
+                  {AI_ASSIST_ACTIONS.map(({ id, label }) =>
+                    aiAssist.results[id] ? (
+                      <div key={id} className="mb-4">
+                        <h3 className="text-sm font-medium text-cyber-primary mb-2">{label}</h3>
+                        <ul className="space-y-1">
+                          {aiAssist.results[id].map((item, index) => (
+                            <li key={index} className="flex items-start gap-2 text-gray-300 text-sm">
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyber-primary/50 mt-1.5 shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {recipe.isPublished && (
             <div className="comments-section">

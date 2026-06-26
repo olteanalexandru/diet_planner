@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import axios from 'axios';
 import { Recipe } from './../../types';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../lib/db';
 import { getSession } from '@auth0/nextjs-auth0';
 import { v4 as uuidv4 } from 'uuid';
+import { applyPremiumLock, canGenerateRecipe, isPremiumUser, recordRecipeGeneration } from '../../lib/premium';
 
-const prisma = new PrismaClient();
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -58,6 +58,10 @@ async function createRecipeActivity(userId: string, recipeId: string, activityTy
 export async function POST(req: NextRequest) {
   const session = await getSession();
   const userId = session?.user?.sub;
+  const viewer = userId
+    ? await prisma.user.findUnique({ where: { id: userId }, select: { subscriptionStatus: true } })
+    : null;
+  const viewerIsPremium = isPremiumUser(viewer);
 
   let requestBody;
   try {
@@ -100,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       recipe: {
-        ...recipe,
+        ...applyPremiumLock(recipe, userId, viewerIsPremium),
         comments: commentsWithLikes,
         isOwner: userId === recipe.author.id,
       },
@@ -146,11 +150,22 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
           recipe: {
-            ...recipe,
+            ...applyPremiumLock(recipe, userId, viewerIsPremium),
             comments: commentsWithLikes,
             isOwner: userId === recipe.author.id,
           },
         });
+      }
+
+      // For logged-in free-tier users, enforce the monthly AI generation limit
+      if (userId && !viewerIsPremium) {
+        const { allowed, remaining } = await canGenerateRecipe(userId);
+        if (!allowed) {
+          return NextResponse.json(
+            { error: 'Monthly AI recipe generation limit reached. Upgrade to Premium for unlimited generations.', remaining },
+            { status: 403 }
+          );
+        }
       }
 
       // For non-existing recipes, always generate temporary recipe first
@@ -195,6 +210,10 @@ export async function POST(req: NextRequest) {
         } catch (error) {
           console.error(`Error fetching image for ${recipeDetails.title}:`, error);
         }
+      }
+
+      if (userId && !viewerIsPremium) {
+        await recordRecipeGeneration(userId);
       }
 
       // Always return a temporary recipe, regardless of auth status

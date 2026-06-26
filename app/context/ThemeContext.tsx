@@ -50,12 +50,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('dark');
 
   useEffect(() => {
-    // Get theme from localStorage on mount
+    // Get theme from localStorage on mount, defaulting to 'dark' so the
+    // html element always carries exactly one theme-* class (the server
+    // render already includes theme-dark, see layout.tsx).
     const savedTheme = localStorage.getItem('theme') as Theme;
-    if (savedTheme && Object.keys(themes).includes(savedTheme)) {
-      setTheme(savedTheme);
-      document.documentElement.classList.add(`theme-${savedTheme}`);
-    }
+    const initialTheme = savedTheme && Object.keys(themes).includes(savedTheme) ? savedTheme : 'dark';
+    setTheme(initialTheme);
+    const root = document.documentElement;
+    root.classList.remove('theme-dark', 'theme-light', 'theme-foodie');
+    root.classList.add(`theme-${initialTheme}`);
   }, []);
 
   const handleThemeChange = (newTheme: Theme) => {
