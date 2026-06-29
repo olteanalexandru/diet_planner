@@ -9,6 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
   }
 
   const { userId } = params;
+  const isOwnProfile = session.user.sub === userId;
 
   try {
     const user = await prisma.user.findUnique({
@@ -16,8 +17,9 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
       select: {
         id: true,
         name: true,
-        email: true,
-        subscriptionStatus: true,
+        email: isOwnProfile,
+        subscriptionStatus: isOwnProfile,
+        _count: { select: { recipes: true, followers: true } },
       },
     });
 

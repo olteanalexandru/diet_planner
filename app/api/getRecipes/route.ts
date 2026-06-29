@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import axios from 'axios';
+import { getSession } from '@auth0/nextjs-auth0';
+import prisma from '../../lib/db';
+import { canGenerateRecipe, isPremiumUser, recordRecipeGeneration } from '../../lib/premium';
 import { Recipe } from './../../types';
 
 const openai = new OpenAI({
@@ -19,10 +22,29 @@ const generateUniqueId = (recipe: Recipe, imageUrl: string): string => {
 };
 
 export async function POST(req: NextRequest) {
+  const session = await getSession();
+  const userId = session?.user?.sub;
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { subscriptionStatus: true } });
+  const viewerIsPremium = isPremiumUser(user);
+
+  if (!viewerIsPremium) {
+    const { allowed, remaining } = await canGenerateRecipe(userId);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Monthly AI usage limit reached. Upgrade to Premium for unlimited AI features.', remaining },
+        { status: 403 }
+      );
+    }
+  }
+
   try {
     const { query } = await req.json();
     const normalisedQuery = query.replace(/[^a-zA-Z0-9\s]/g, '');
-    
+
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -89,6 +111,10 @@ export async function POST(req: NextRequest) {
         };
       }
     }));
+
+    if (!viewerIsPremium) {
+      await recordRecipeGeneration(userId);
+    }
 
     return NextResponse.json({ recipes: recipesWithImages });
   } catch (error) {

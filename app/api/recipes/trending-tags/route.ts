@@ -9,6 +9,7 @@ export async function GET() {
 
     const recipes = await prisma.recipe.findMany({
       where: {
+        status: 'published',
         createdAt: {
           gte: thirtyDaysAgo
         }

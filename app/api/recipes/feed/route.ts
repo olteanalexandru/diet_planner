@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
+import { Prisma } from '@prisma/client';
 import prisma from '../../../lib/db';
 
 const ITEMS_PER_PAGE = 10;
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
     const { category = 'all', sort = 'trending', page = 1, tag = null } = await req.json();
 
     // Build where clause to match schema fields
-    const where: any = {
+    const where: Prisma.RecipeWhereInput = {
       status: 'published', // Match the default value in schema
     };
 
@@ -24,56 +25,36 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // Debug log to check the query
-    console.log('Recipe query:', {
+    // Fetch all matching recipes so trending's composite engagement score can be
+    // computed and sorted before pagination is applied (DB-level orderBy alone
+    // can't express the favorites/comments/viewCount composite).
+    const recipes = await prisma.recipe.findMany({
       where,
-      orderBy: sort === 'trending' ? { viewCount: 'desc' } : { createdAt: 'desc' },
-      skip: (page - 1) * ITEMS_PER_PAGE,
-      take: ITEMS_PER_PAGE,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        likes: session?.user ? {
+          where: {
+            userId: session.user.sub
+          },
+          select: {
+            userId: true
+          }
+        } : false,
+        _count: {
+          select: {
+            comments: true,
+            favorites: true,
+            likes: true // Added likes count
+          }
+        },
+      }
     });
-
-    // Calculate trending score based on recent activity
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    // Build orderBy based on sort parameter
-    const orderBy: any = sort === 'trending' 
-      ? { viewCount: 'desc' }
-      : { createdAt: 'desc' };
-
-    // Fetch recipes with likes count and user's like status
-    const [recipes, total] = await prisma.$transaction([
-      prisma.recipe.findMany({
-        where,
-        orderBy,
-        skip: (page - 1) * ITEMS_PER_PAGE,
-        take: ITEMS_PER_PAGE,
-        include: {
-          author: {
-            select: {
-              id: true,
-              name: true,
-            }
-          },
-          likes: session?.user ? {
-            where: {
-              userId: session.user.sub
-            },
-            select: {
-              userId: true
-            }
-          } : false,
-          _count: {
-            select: {
-              comments: true,
-              favorites: true,
-              likes: true // Added likes count
-            }
-          },
-        }
-      }),
-      prisma.recipe.count({ where })
-    ]);
 
     // Transform recipes to include like status and counts
     const transformedRecipes = recipes.map(recipe => {
@@ -93,13 +74,17 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    // Sort by engagement score if trending
+    // Sort by engagement score if trending (latest is already ordered by createdAt from the query)
     if (sort === 'trending') {
       transformedRecipes.sort((a, b) => b.engagementScore - a.engagementScore);
     }
 
+    const total = transformedRecipes.length;
+    const skip = (page - 1) * ITEMS_PER_PAGE;
+    const pageRecipes = transformedRecipes.slice(skip, skip + ITEMS_PER_PAGE);
+
     return NextResponse.json({
-      recipes: transformedRecipes,
+      recipes: pageRecipes,
       hasMore: total > page * ITEMS_PER_PAGE,
       total
     });

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import axios from 'axios';
+import { getSession } from '@auth0/nextjs-auth0';
+import prisma from '../../lib/db';
+import { canGenerateRecipe, isPremiumUser, recordRecipeGeneration } from '../../lib/premium';
 import { Recipe } from './../../types';
 
 const openai = new OpenAI({
@@ -18,11 +21,30 @@ const generateUniqueId = (recipe: Recipe, imageUrl: string): string => {
 };
 
 export async function POST(req: NextRequest) {
+  const session = await getSession();
+  const userId = session?.user?.sub;
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { subscriptionStatus: true } });
+  const viewerIsPremium = isPremiumUser(user);
+
+  if (!viewerIsPremium) {
+    const { allowed, remaining } = await canGenerateRecipe(userId);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Monthly AI usage limit reached. Upgrade to Premium for unlimited AI features.', remaining },
+        { status: 403 }
+      );
+    }
+  }
+
   try {
     const { query, avoid } = await req.json();
 
     const normalisedQuery = query.replace(/[^a-zA-Z0-9\s]/g, '');
-    
+
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -30,8 +52,6 @@ export async function POST(req: NextRequest) {
         { role: "user", content: `Suggest 5 recipes for: ${normalisedQuery}. Do not include the recipes ${avoid}. Only return a JSON array of objects, each with 'id', 'title', and 'cookingTime' properties. 'cookingTime' should be in exact minutes. Do not include any other text or explanations, only the JSON.` }
       ],
     });
-
-    console.log('Completion response:', completion.choices[0].message?.content);
 
     let recipes: Recipe[] = [];
 
@@ -78,6 +98,10 @@ export async function POST(req: NextRequest) {
         };
       }
     }));
+
+    if (!viewerIsPremium) {
+      await recordRecipeGeneration(userId);
+    }
 
     return NextResponse.json({ recipes: recipesWithImages });
   } catch (error) {

@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
     // Get all recipes created in the last week
     const recipes = await prisma.recipe.findMany({
       where: {
+        status: 'published',
         createdAt: {
           gte: lastWeek
         }
@@ -63,6 +64,7 @@ export async function GET(req: NextRequest) {
     
     const previousWeekRecipes = await prisma.recipe.findMany({
       where: {
+        status: 'published',
         createdAt: {
           gte: twoWeeksAgo,
           lt: lastWeek
