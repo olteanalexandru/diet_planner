@@ -59,16 +59,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
     root.classList.remove('theme-dark', 'theme-light', 'theme-foodie');
     root.classList.add(`theme-${initialTheme}`);
+    root.classList.toggle('dark', initialTheme === 'dark');
   }, []);
 
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
-    
+
     // Update root classes
     const root = document.documentElement;
     root.classList.remove('theme-dark', 'theme-light', 'theme-foodie');
     root.classList.add(`theme-${newTheme}`);
+    // Tailwind's `dark:` variant only activates on the literal `dark` class;
+    // some legacy components (collections feature) still rely on it.
+    root.classList.toggle('dark', newTheme === 'dark');
   };
 
   return (

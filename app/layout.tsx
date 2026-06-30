@@ -10,6 +10,7 @@ import Header from './Components/Header';
 import Footer from './Components/Footer';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { SubscriptionProvider } from './context/SubscriptionContext';
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const geistSans = localFont({
@@ -35,11 +36,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="theme-dark" suppressHydrationWarning>
+    <html lang="en" className="theme-dark dark" suppressHydrationWarning>
     <body className={`${geistSans.variable} ${geistMono.variable}
       bg-gradient-to-b min-h-screen font-geist-sans antialiased`}
     >
       <UserProvider>
+        <SubscriptionProvider>
         <LanguageProvider>
         <ThemeProvider>
             <SpeedInsights />
@@ -62,6 +64,7 @@ export default function RootLayout({
           </RecipeProvider>
         </ThemeProvider>
         </LanguageProvider>
+        </SubscriptionProvider>
         </UserProvider>
       </body>
     </html>

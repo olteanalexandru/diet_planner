@@ -7,25 +7,14 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import ThemeSwitcher from './ThemeSwitcher';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '../context/LanguageContext';
+import { UsageBadge } from './UsageBadge';
 import { ChefHat, Layout, Users, ScrollText, Bell, Sparkles, Menu, X } from 'lucide-react';
 
 const Header: React.FC = () => {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { user } = useUser();
-  const [isPremium, setIsPremium] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    if (!user) {
-      setIsPremium(false);
-      return;
-    }
-    fetch(`/api/users/${user.sub}`)
-      .then((res) => res.json())
-      .then((data) => setIsPremium(data.user?.subscriptionStatus === 'premium'))
-      .catch(() => setIsPremium(false));
-  }, [user]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -78,7 +67,9 @@ const Header: React.FC = () => {
             <Link href="/pricing" className={`relative ${linkClass('/pricing')}`}>
               <Sparkles size={18} />
               <span>{t('nav.pricing')}</span>
-              {!isPremium && (
+              {user ? (
+                <UsageBadge className="ml-1" />
+              ) : (
                 <span
                   title={t('nav.premiumTeaser')}
                   className="ml-1 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-cyber-primary text-space-900"
@@ -118,7 +109,9 @@ const Header: React.FC = () => {
           <Link href="/pricing" className={`relative ${linkClass('/pricing')}`}>
             <Sparkles size={18} />
             <span>{t('nav.pricing')}</span>
-            {!isPremium && (
+            {user ? (
+              <UsageBadge className="ml-1" />
+            ) : (
               <span className="ml-1 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-cyber-primary text-space-900">
                 {t('nav.upgrade')}
               </span>

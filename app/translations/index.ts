@@ -64,6 +64,9 @@ export const translations = {
     'pricing.error.startCheckout': 'Failed to start checkout',
     'pricing.error.openPortal': 'Failed to open billing portal',
     'pricing.error.generic': 'Something went wrong',
+    'pricing.free.usageGenerations': '{used}/{limit} AI generations used this month',
+    'pricing.free.usageCollections': '{used}/{limit} collections used',
+    'pricing.premium.usageUnlimited': "You're on Premium — unlimited generations & collections",
 
     'notifications.title': 'Notifications',
     'notifications.loading': 'Loading...',
@@ -118,6 +121,21 @@ export const translations = {
     'premiumUpsell.defaultTitle': 'Premium feature',
     'premiumUpsell.defaultMessage': 'Upgrade to Premium to unlock this.',
     'premiumUpsell.viewPlans': 'View plans',
+
+    'subscription.premiumBadge': 'Premium',
+    'subscription.usageShort': '{remaining}/{limit} left',
+    'subscription.limitReached': 'Limit reached',
+    'subscription.generationsRemaining': '{remaining} of {limit} free AI generations remaining this month',
+
+    'recipes.title': 'AI Generated Recipes',
+    'recipes.searchingFor': 'Searching for:',
+    'recipes.showDifferent': 'Show me different recipes',
+    'recipes.loadingMore': 'Loading more recipes...',
+    'recipes.error.loginRequired': 'Log in to generate AI recipes.',
+    'recipes.error.limitTitle': "You've used your free AI generations",
+    'recipes.error.limitMessage': 'Upgrade to Premium for unlimited AI recipe generations.',
+    'recipes.error.limitInline': "You've reached your monthly AI generation limit. Upgrade to Premium for unlimited generations.",
+    'recipes.error.generic': 'Something went wrong while generating recipes. Please try again.',
 
     'feed.sortTrending': 'Trending',
     'feed.sortLatest': 'Latest',
@@ -229,6 +247,9 @@ export const translations = {
     'pricing.error.startCheckout': 'Pornirea plății a eșuat',
     'pricing.error.openPortal': 'Deschiderea portalului de facturare a eșuat',
     'pricing.error.generic': 'Ceva nu a funcționat corect',
+    'pricing.free.usageGenerations': '{used}/{limit} generări AI folosite luna aceasta',
+    'pricing.free.usageCollections': '{used}/{limit} colecții folosite',
+    'pricing.premium.usageUnlimited': 'Ai Premium — generări și colecții nelimitate',
 
     'notifications.title': 'Notificări',
     'notifications.loading': 'Se încarcă...',
@@ -283,6 +304,21 @@ export const translations = {
     'premiumUpsell.defaultTitle': 'Funcție Premium',
     'premiumUpsell.defaultMessage': 'Fă upgrade la Premium pentru a debloca această funcție.',
     'premiumUpsell.viewPlans': 'Vezi planurile',
+
+    'subscription.premiumBadge': 'Premium',
+    'subscription.usageShort': '{remaining}/{limit} rămase',
+    'subscription.limitReached': 'Limită atinsă',
+    'subscription.generationsRemaining': '{remaining} din {limit} generări AI gratuite rămase luna aceasta',
+
+    'recipes.title': 'Rețete generate de AI',
+    'recipes.searchingFor': 'Cauți:',
+    'recipes.showDifferent': 'Arată-mi alte rețete',
+    'recipes.loadingMore': 'Se încarcă mai multe rețete...',
+    'recipes.error.loginRequired': 'Conectează-te pentru a genera rețete AI.',
+    'recipes.error.limitTitle': 'Ai folosit generările AI gratuite',
+    'recipes.error.limitMessage': 'Fă upgrade la Premium pentru generări AI nelimitate de rețete.',
+    'recipes.error.limitInline': 'Ai atins limita lunară de generări AI. Fă upgrade la Premium pentru generări nelimitate.',
+    'recipes.error.generic': 'A apărut o eroare la generarea rețetelor. Te rugăm să încerci din nou.',
 
     'feed.sortTrending': 'Populare',
     'feed.sortLatest': 'Recente',

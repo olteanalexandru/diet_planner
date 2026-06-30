@@ -5,12 +5,20 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import { Collection } from '@/app/types/collection';
 import CollectionGrid from '@/app/Components/collections/CollectionGrid';
 import CreateCollectionModal from '@/app/Components/collections/CreateCollectionModal';
+import { useSubscription } from '@/app/context/SubscriptionContext';
 
 export default function CollectionsPage() {
   const { user, isLoading: userLoading } = useUser();
+  const { status: subscriptionStatus } = useSubscription();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const atCollectionLimit =
+    !!subscriptionStatus &&
+    !subscriptionStatus.isPremium &&
+    subscriptionStatus.collectionsLimit !== null &&
+    collections.length >= subscriptionStatus.collectionsLimit;
 
   useEffect(() => {
     const fetchCollections = async () => {
@@ -64,13 +72,28 @@ export default function CollectionsPage() {
           <p className="mt-1 text-gray-600 dark:text-gray-400">
             Organize your favorite recipes into collections
           </p>
+          {subscriptionStatus && !subscriptionStatus.isPremium && (
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {collections.length}/{subscriptionStatus.collectionsLimit} collections used
+            </p>
+          )}
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          Create Collection
-        </button>
+        {atCollectionLimit ? (
+          <a
+            href="/pricing"
+            className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+            title="Free plan collection limit reached"
+          >
+            Upgrade for more collections
+          </a>
+        ) : (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Create Collection
+          </button>
+        )}
       </div>
 
       <CollectionGrid

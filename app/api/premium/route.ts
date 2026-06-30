@@ -2,8 +2,37 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
 import { getStripeClient } from '../../lib/stripe';
 import prisma from '../../lib/db';
+import { FREE_PLAN_LIMITS, getUserWithFreshGenerationWindow, isPremiumUser } from '../../lib/premium';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+// Returns the current user's subscription status and free-tier usage, so the
+// UI can proactively show remaining AI generations/collections instead of
+// only finding out when a request is rejected.
+export async function GET() {
+  const session = await getSession();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userId = session.user.sub;
+  const user = await getUserWithFreshGenerationWindow(userId);
+  if (!user) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  const premium = isPremiumUser(user);
+  const collectionsUsed = await prisma.collection.count({ where: { userId } });
+
+  return NextResponse.json({
+    isPremium: premium,
+    generationsUsed: user.monthlyGenerations,
+    generationsLimit: premium ? null : FREE_PLAN_LIMITS.monthlyGenerations,
+    generationsRemaining: premium ? null : Math.max(0, FREE_PLAN_LIMITS.monthlyGenerations - user.monthlyGenerations),
+    collectionsUsed,
+    collectionsLimit: premium ? null : FREE_PLAN_LIMITS.maxCollections,
+  });
+}
 
 export async function POST(req: NextRequest) {
   const session = await getSession();

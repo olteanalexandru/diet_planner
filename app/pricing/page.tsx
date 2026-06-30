@@ -1,10 +1,11 @@
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useSearchParams } from 'next/navigation';
 import { Check } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import type { TranslationKey } from '../translations';
 
 const FREE_FEATURE_KEYS: TranslationKey[] = [
@@ -41,26 +42,12 @@ function CheckoutResultBanner() {
 function PricingContent() {
   const { user, isLoading: userLoading } = useUser();
   const { t } = useLanguage();
+  const { status, loading: loadingStatus } = useSubscription();
 
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('free');
-  const [loadingStatus, setLoadingStatus] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) {
-      setLoadingStatus(false);
-      return;
-    }
-
-    fetch(`/api/users/${user.sub}`)
-      .then((res) => res.json())
-      .then((data) => setSubscriptionStatus(data.user?.subscriptionStatus || 'free'))
-      .catch(() => setError(t('pricing.error.loadStatus')))
-      .finally(() => setLoadingStatus(false));
-  }, [user]);
-
-  const isPremium = subscriptionStatus === 'premium';
+  const isPremium = status?.isPremium ?? false;
 
   const handleUpgrade = async () => {
     setActionLoading(true);
@@ -116,6 +103,22 @@ function PricingContent() {
           {!userLoading && !isPremium && (
             <div className="text-center text-space-400 py-2">{t('pricing.free.currentPlan')}</div>
           )}
+          {user && !loadingStatus && status && !isPremium && (
+            <div className="mt-4 pt-4 border-t border-space-700 space-y-1 text-sm text-space-400">
+              <p>
+                {t('pricing.free.usageGenerations', {
+                  used: status.generationsUsed,
+                  limit: status.generationsLimit ?? 0,
+                })}
+              </p>
+              <p>
+                {t('pricing.free.usageCollections', {
+                  used: status.collectionsUsed,
+                  limit: status.collectionsLimit ?? 0,
+                })}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="bg-space-800 border-2 border-cyber-primary rounded-xl p-8 relative">
@@ -132,6 +135,12 @@ function PricingContent() {
               </li>
             ))}
           </ul>
+
+          {isPremium && (
+            <div className="mb-4 text-center text-sm text-cyber-primary">
+              {t('pricing.premium.usageUnlimited')}
+            </div>
+          )}
 
           {!user ? (
             <a

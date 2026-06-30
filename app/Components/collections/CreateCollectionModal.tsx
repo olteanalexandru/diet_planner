@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CreateCollectionInput } from '@/app/types/collection';
+import { useSubscription } from '@/app/context/SubscriptionContext';
 
 interface CreateCollectionModalProps {
   isOpen: boolean;
@@ -12,7 +13,10 @@ export default function CreateCollectionModal({
   onClose,
 }: CreateCollectionModalProps) {
   const router = useRouter();
+  const { refresh: refreshSubscription } = useSubscription();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLimitError, setIsLimitError] = useState(false);
   const [formData, setFormData] = useState<CreateCollectionInput>({
     name: '',
     description: '',
@@ -25,6 +29,8 @@ export default function CreateCollectionModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
+    setIsLimitError(false);
 
     try {
       const response = await fetch('/api/collections', {
@@ -35,16 +41,21 @@ export default function CreateCollectionModal({
         body: JSON.stringify(formData),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to create collection');
+        setError(data.error || 'Failed to create collection');
+        setIsLimitError(response.status === 403);
+        return;
       }
 
-      const collection = await response.json();
+      refreshSubscription();
       router.refresh();
       onClose();
-      router.push(`/collections/${collection.id}`);
-    } catch (error) {
-      console.error('Error creating collection:', error);
+      router.push(`/collections/${data.id}`);
+    } catch (err) {
+      console.error('Error creating collection:', err);
+      setError('Failed to create collection');
     } finally {
       setIsLoading(false);
     }
@@ -81,6 +92,16 @@ export default function CreateCollectionModal({
           </h2>
 
           <form onSubmit={handleSubmit} className="mt-4">
+            {error && (
+              <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400">
+                <p>{error}</p>
+                {isLimitError && (
+                  <a href="/pricing" className="mt-1 inline-block font-medium underline">
+                    View Premium plans
+                  </a>
+                )}
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <label
